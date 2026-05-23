@@ -122,6 +122,7 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
       <div class="nav-item" onclick="showScreen('timer')"><span class="nav-icon">&#9201;</span><span class="nav-label">Shot Clock</span></div>
       <div class="nav-item" onclick="showScreen('shop')"><span class="nav-icon">&#128188;</span><span class="nav-label">Pro Shop</span></div>
       <div class="nav-item" onclick="showScreen('rules')"><span class="nav-icon">&#128203;</span><span class="nav-label">Rules</span></div>
+      <div class="nav-item" onclick="showScreen('tips')"><span class="nav-icon">&#127775;</span><span class="nav-label">Tips</span></div>
       <div class="nav-item" onclick="showScreen('profile')"><span class="nav-icon">&#128100;</span><span class="nav-label">My Profile</span></div>
     </nav>
     <div class="sidebar-footer">v9.2 &#8212; PWA</div>
@@ -285,6 +286,22 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
       </div></div>
     </div>
 
+    <!-- TIPS -->
+    <div class="screen" id="screen-tips">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Player Development</div><h2>Tips &amp; Strategy</h2></div>
+      <div class="content">
+        <div id="tips-filters" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+          <div class="pill active" onclick="filterTips('all',this)">All</div>
+          <div class="pill" onclick="filterTips('Fundamentals',this)">Fundamentals</div>
+          <div class="pill" onclick="filterTips('Cue Ball',this)">Cue Ball</div>
+          <div class="pill" onclick="filterTips('Shot Making',this)">Shot Making</div>
+          <div class="pill" onclick="filterTips('Strategy',this)">Strategy</div>
+          <div class="pill" onclick="filterTips('Mental',this)">Mental Game</div>
+        </div>
+        <div id="tips-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div></div>
+    </div>
+
     <!-- PROFILE -->
     <div class="screen" id="screen-profile">
       <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Player Account</div><h2 id="display-name">Welcome, Player</h2></div>
@@ -405,6 +422,7 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
   <div class="more-drawer-item" onclick="drawerNav('bracket')"><span class="more-item-icon">&#128202;</span><div><div class="more-item-label">Brackets</div><div class="more-item-sub">Tournament Tree Generator</div></div></div>
   <div class="more-drawer-item" onclick="drawerNav('timer')"><span class="more-item-icon">&#9201;</span><div><div class="more-item-label">Shot Clock</div><div class="more-item-sub">Adjustable Countdown Timer</div></div></div>
   <div class="more-drawer-item" onclick="drawerNav('rules')"><span class="more-item-icon">&#128203;</span><div><div class="more-item-label">Rules Directory</div><div class="more-item-sub">WPA Interactive Database</div></div></div>
+  <div class="more-drawer-item" onclick="drawerNav('tips')"><span class="more-item-icon">&#127775;</span><div><div class="more-item-label">Tips &amp; Strategy</div><div class="more-item-sub">Pro Technique &amp; Game Plans</div></div></div>
 </div>
 
 <script>
@@ -426,7 +444,7 @@ function showToast(msg, type) {
 // NAVIGATION ENGINE
 // ════════════════════════════════════════════════════════
 function showScreen(id) {
-    const all = ['home','venues','academy','timer','shop','rules','profile','score','bracket'];
+    const all = ['home','venues','academy','timer','shop','rules','tips','profile','score','bracket'];
     all.forEach(s => { const el = document.getElementById('screen-'+s); if(el) el.classList.remove('active'); });
     const t = document.getElementById('screen-'+id);
     if(t) { t.classList.add('active'); window.scrollTo(0,0); }
@@ -680,6 +698,72 @@ function fetchNearbyVenues(lat, lng) {
 }
 
 // ════════════════════════════════════════════════════════
+// TIPS & STRATEGY
+// ════════════════════════════════════════════════════════
+const TIPS_DATA = [
+    // FUNDAMENTALS
+    { id:1, cat:'Fundamentals', title:'Stance Width', body:'Stand with feet shoulder-width apart, dominant foot slightly forward. Your weight should sit 60% on your front foot — this locks your body and lets only your forearm swing.' },
+    { id:2, cat:'Fundamentals', title:'Bridge Length', body:'Keep your bridge hand 6–8 inches from the cue ball. Too close causes jabbing; too far causes wobble. Find your natural distance and repeat it every shot.' },
+    { id:3, cat:'Fundamentals', title:'Grip Pressure', body:'Hold the cue with a relaxed thumb-and-two-finger pinch. If your knuckles are white you are squeezing. Tension travels up the cue and kills accuracy.' },
+    { id:4, cat:'Fundamentals', title:'Pendulum Stroke', body:'Your elbow is the pivot — only your forearm moves. Keep your upper arm still. Rehearse the stroke with 3–4 slow warm-up swings before you pull the trigger.' },
+    { id:5, cat:'Fundamentals', title:'Follow-Through', body:'Drive the cue through the ball 4–6 inches after contact, not at it. Stopping your stroke short dumps energy and adds unwanted English at the last second.' },
+    // CUE BALL
+    { id:6, cat:'Cue Ball', title:'Stop Shot', body:'Hit dead center-ball with a firm, smooth stroke. The cue ball should stop exactly where it contacted the object ball. This is your most important positional weapon.' },
+    { id:7, cat:'Cue Ball', title:'Draw (Backspin)', body:'Aim 1–2 tip-widths below center. Accelerate smoothly through the ball — do not jab. A loose grip lets the cue naturally rise after contact, maximizing draw spin.' },
+    { id:8, cat:'Cue Ball', title:'Follow (Topspin)', body:'Hit 1 tip-width above center. Follow spin extends the cue ball forward after contact. Use it to chase the cue ball down table or roll into position for your next shot.' },
+    { id:9, cat:'Cue Ball', title:'Side English', body:'Left English angles the cue ball left off a rail; right English angles it right. Start with half-tip of English — a full tip is a lot. Always compensate your aim slightly into the spin.' },
+    { id:10, cat:'Cue Ball', title:'Stun Shot', body:'Hit just below center on a short stroke with no follow-through. The cue ball slides without rolling, so its rebound off the object ball is predictable — great for shape control on thin cuts.' },
+    // SHOT MAKING
+    { id:11, cat:'Shot Making', title:'Ghost Ball Method', body:'Visualize a ghost ball touching the object ball at the pocket line. Aim the center of your cue ball at the center of that ghost ball. Simple and consistent for all cut angles.' },
+    { id:12, cat:'Shot Making', title:'Bank Shot Angle', body:'A ball banks off a cushion at roughly the same angle it arrived — but speed changes this. Hit harder for a wider rebound, softer for a tighter angle. Always account for cue ball position after.' },
+    { id:13, cat:'Shot Making', title:'Thin vs Thick Cuts', body:'Thin cuts (15° or less) require precise aim but leave the cue ball on a predictable path. Thick cuts (over 45°) send the cue ball nearly straight — plan position accordingly.' },
+    { id:14, cat:'Shot Making', title:'Kick Shots', body:'Use the diamond system: diamonds on the long rail are numbered 0–4; short rail 0–2. Add cue ball diamond to target diamond to find the contact point. Works best with center-ball english.' },
+    { id:15, cat:'Shot Making', title:'Combination Shots', body:'Treat the first (intermediate) ball as your cue ball. Aim for the exact contact point on it that would pocket the second ball. Only attempt combos when the balls are nearly frozen together.' },
+    // STRATEGY
+    { id:16, cat:'Strategy', title:'Safety Play', body:'A good safety leaves your opponent with zero easy shots — ball hidden behind another ball, or cue ball frozen to the rail far from their object ball. Winning safeties win sets.' },
+    { id:17, cat:'Strategy', title:'Think Three Shots Ahead', body:'Before every shot ask: where does this leave me, and where does THAT leave me? A pocketed ball means nothing if you scratch on the next or leave the cue ball buried.' },
+    { id:18, cat:'Strategy', title:'Break Shot', body:'Aim the cue ball at the head ball for maximum energy transfer. A tight rack is more important than raw power — one dead ball in the rack ruins any break. Aim for a consistent split, not a hero break.' },
+    { id:19, cat:'Strategy', title:'Work the Clusters', body:'Pocket a ball near a cluster to free it before you need it. Running through a rack in order sounds right but a late cluster can end your run in one shot.' },
+    { id:20, cat:'Strategy', title:'Leave an Angle', body:'Never leave yourself straight-in on the next shot unless you want to stop the cue ball. A slight cut angle gives you control of the cue ball direction. Straight-in = position surrender.' },
+    // MENTAL
+    { id:21, cat:'Mental', title:'Pre-Shot Routine', body:'Walk the same path to every shot. Crouch the same way. Take the same number of warm-up strokes. Routine kills hesitation and keeps nerves from taking over in pressure situations.' },
+    { id:22, cat:'Mental', title:'One Shot at a Time', body:'The next shot does not exist until this one is over. Committing fully to the shot in front of you is the single biggest mental upgrade an intermediate player can make.' },
+    { id:23, cat:'Mental', title:'Reset After a Miss', body:'A missed shot happened. It cannot unhappen. Your job now is the next shot. Top pros forget misses in seconds — amateurs replay them all rack long. Let it go.' },
+    { id:24, cat:'Mental', title:'Read the Table First', body:'Walk the table before you rack or after your opponent misses. Find the trouble balls, clusters, and locked-up balls first. Your runout route depends on knowing those hazards in advance.' },
+    { id:25, cat:'Mental', title:'Slow Down', body:'The number one amateur mistake is shooting too fast. The ball will still be there in five seconds. Stand up if you feel rushed, reset, and re-approach. Speed kills accuracy every time.' }
+];
+
+const TIP_COLORS = { Fundamentals:'rgba(212,160,23,0.2)', 'Cue Ball':'rgba(39,174,96,0.2)', 'Shot Making':'rgba(52,152,219,0.2)', Strategy:'rgba(155,89,182,0.2)', Mental:'rgba(231,76,60,0.2)' };
+const TIP_BORDER = { Fundamentals:'rgba(212,160,23,0.5)', 'Cue Ball':'rgba(39,174,96,0.5)', 'Shot Making':'rgba(52,152,219,0.5)', Strategy:'rgba(155,89,182,0.5)', Mental:'rgba(231,76,60,0.5)' };
+const TIP_TEXT  = { Fundamentals:'var(--gold)', 'Cue Ball':'var(--green2)', 'Shot Making':'#5dade2', Strategy:'#c39bd3', Mental:'#f1948a' };
+
+var _tipsFilter = 'all';
+
+function filterTips(cat, el) {
+    document.querySelectorAll('#tips-filters .pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    _tipsFilter = cat;
+    renderTips();
+}
+
+function renderTips() {
+    var list = document.getElementById('tips-list'); if (!list) return;
+    var tips = _tipsFilter === 'all' ? TIPS_DATA : TIPS_DATA.filter(function(t){ return t.cat === _tipsFilter; });
+    list.innerHTML = tips.map(function(t) {
+        var bg = TIP_COLORS[t.cat] || 'rgba(255,255,255,0.03)';
+        var border = TIP_BORDER[t.cat] || 'var(--borderg)';
+        var color  = TIP_TEXT[t.cat]  || 'var(--gold)';
+        return '<div class="card" style="padding:16px;background:' + bg + ';border-color:' + border + ';">'
+            + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">'
+            + '<span style="font-family:\'DM Mono\';font-size:9px;letter-spacing:2px;text-transform:uppercase;color:' + color + ';background:rgba(0,0,0,0.25);padding:3px 8px;border-radius:4px;border:1px solid ' + border + ';">' + t.cat + '</span>'
+            + '</div>'
+            + '<div style="font-family:\'Playfair Display\';font-size:15px;color:var(--ivory);margin-bottom:8px;">' + t.title + '</div>'
+            + '<div style="font-family:\'Libre Baskerville\',serif;font-size:13px;color:var(--dim);line-height:1.65;">' + t.body + '</div>'
+            + '</div>';
+    }).join('');
+}
+
+// ════════════════════════════════════════════════════════
 // ACADEMY
 // ════════════════════════════════════════════════════════
 const LESSON_DATA = [
@@ -884,7 +968,7 @@ function filterRules(){ renderRules(); }
 // ════════════════════════════════════════════════════════
 // MORE DRAWER
 // ════════════════════════════════════════════════════════
-const DRAWER_SCREENS=['academy','bracket','timer','rules'];
+const DRAWER_SCREENS=['academy','bracket','timer','rules','tips'];
 function toggleMoreDrawer(){ const d=document.getElementById('more-drawer'); d.classList.contains('open')?closeMoreDrawer():openMoreDrawer(); }
 function openMoreDrawer(){ document.getElementById('more-drawer').classList.add('open'); document.getElementById('more-backdrop').classList.add('open'); document.getElementById('bn-more').classList.add('active'); }
 function closeMoreDrawer(){
@@ -1101,7 +1185,7 @@ function mpGeoError(err, locEl) {
 // BOOT
 // ════════════════════════════════════════════════════════
 window.onload = function() {
-    updateProfileUI(); renderVenues(); renderLessons(); renderProducts(); renderRules(); loadCart();
+    updateProfileUI(); renderVenues(); renderLessons(); renderProducts(); renderRules(); renderTips(); loadCart();
     const locEl = document.getElementById('location-status');
     var isSecure = window.location.protocol === 'https:'
         || window.location.hostname === 'localhost'
