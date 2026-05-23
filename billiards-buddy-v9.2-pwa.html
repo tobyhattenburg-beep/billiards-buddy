@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Billiards Buddy v9.2 — PWA</title>
+<!-- PWA: Web App Manifest -->
+<link rel="manifest" href="./manifest.json">
+<!-- PWA: iOS meta tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Billiards Buddy">
+<!-- PWA: Theme color -->
+<meta name="theme-color" content="#d4a017">
+<!-- PWA: iOS home screen icon -->
+<link rel="apple-touch-icon" href="./icon-192.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:#0a1f0e}
+::-webkit-scrollbar-thumb{background:#c8860a;border-radius:3px}
+:root{
+  --felt:#1a5c2a;--felt2:#14471f;--felt3:#0d3316;--deep:#061a0b;
+  --wood:#2e1503;--wood2:#4a2208;--trim:#c8860a;--trim2:#e8a820;
+  --ivory:#f5eed6;--dim:#a89060;--chalk:#e0d4b8;--gold:#d4a017;
+  --gold2:#f0c040;--red:#c0392b;--red2:#e74c3c;--green:#1e8449;
+  --green2:#27ae60;--blue:#1a6b8a;--blue2:#2980b9;--stripe:#e8c84a;
+  --border:#1e5c2a;--borderg:#7a5010;
+}
+body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:var(--ivory);min-height:100vh;overflow-x:hidden}
+.scene{position:fixed;inset:0;z-index:0;transition:opacity 0.8s ease;opacity:0;pointer-events:none;}
+.scene.active{opacity:1}
+#app{display:flex;min-height:100vh;position:relative;z-index:1}
+#sidebar{width:230px;min-height:100vh;flex-shrink:0;display:flex;flex-direction:column;border-right:3px solid var(--trim);position:sticky;top:0;height:100vh;background:rgba(6,26,11,0.92);backdrop-filter:blur(12px);z-index:50;}
+.sidebar-logo{padding:26px 22px 18px;border-bottom:2px solid var(--borderg)}
+.sidebar-logo h1{font-family:'Playfair Display',serif;font-size:21px;font-weight:900;color:var(--gold2);line-height:1.2;text-shadow:0 0 20px rgba(240,192,64,0.4);}
+.sidebar-logo p{font-size:10px;color:var(--dim);letter-spacing:2.5px;text-transform:uppercase;margin-top:5px;font-family:'DM Mono',monospace;}
+#sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:14px;padding:13px 22px;cursor:pointer;border-left:3px solid transparent;transition:all 0.25s;color:var(--dim);font-family:'Libre Baskerville',serif;font-size:13.5px;}
+.nav-item:hover{background:rgba(255,255,255,0.07);color:var(--ivory);border-left-color:var(--trim)}
+.nav-item.active{background:rgba(212,160,23,0.18);color:var(--gold2);border-left-color:var(--gold2)}
+.nav-icon{font-size:18px;width:22px;text-align:center}
+.nav-label{flex:1}
+.sidebar-footer{padding:14px 22px;border-top:1px solid var(--borderg);font-size:10px;color:var(--dim);font-family:'DM Mono',monospace;letter-spacing:1px;}
+#bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:200;border-top:2px solid var(--trim);background:rgba(6,26,11,0.96);backdrop-filter:blur(16px);}
+.bottom-nav-inner{display:flex}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 8px;cursor:pointer;background:none;border:none;color:var(--dim);transition:color 0.2s;-webkit-tap-highlight-color:transparent;}
+.bn-item.active{color:var(--gold2)}
+.bn-icon{font-size:19px;line-height:1}
+.bn-label{font-size:8px;letter-spacing:0.8px;text-transform:uppercase;font-family:'DM Mono',monospace}
+#main{flex:1;min-height:100vh;overflow-y:auto;position:relative}
+.screen{display:none;min-height:100vh;padding-bottom:80px;}
+.screen.active{display:block}
+.glass-overlay{position:relative;background:rgba(6,26,11,0.65);backdrop-filter:blur(2px);min-height:100vh;}
+.page-header{padding:30px 30px 18px;border-bottom:1px solid rgba(200,134,10,0.3);position:relative;overflow:hidden;}
+.page-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--trim),var(--gold2),var(--trim));}
+.eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:5px;}
+.page-header h2{font-family:'Playfair Display',serif;font-size:clamp(22px,3vw,34px);font-weight:900;color:var(--ivory);}
+.content{padding:22px}
+.card{background:rgba(6,26,11,0.75);border:1px solid rgba(30,92,42,0.7);border-radius:12px;padding:18px;transition:border-color 0.2s,transform 0.15s;margin-bottom:14px;backdrop-filter:blur(8px);}
+.card:hover{border-color:rgba(200,134,10,0.6)}
+.card.clickable{cursor:pointer}
+.card.clickable:hover{transform:translateY(-2px)}
+.card.gold-card{background:rgba(212,160,23,0.1);border-color:rgba(139,105,20,0.7)}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.stat-card{background:rgba(0,0,0,0.4);border:1px solid rgba(30,92,42,0.6);border-radius:10px;padding:15px 10px;text-align:center;}
+.stat-value{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--gold2);line-height:1}
+.stat-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-top:4px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border-radius:8px;font-family:'Libre Baskerville',serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all 0.2s;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#061a0b}
+.btn-felt{background:rgba(255,255,255,0.08);color:var(--ivory);border:1px solid rgba(30,92,42,0.6)}
+.btn-full{width:100%}
+.pill{padding:6px 15px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;border:1px solid rgba(30,92,42,0.6);background:rgba(6,26,11,0.6);color:var(--dim);}
+.pill.active{background:var(--gold);color:#061a0b;border-color:var(--gold);font-weight:700}
+.pulse{animation:pulse-red 1.5s infinite;}
+@keyframes pulse-red{0%{transform:scale(0.95);opacity:0.7;}70%{transform:scale(1.1);opacity:1;}100%{transform:scale(0.95);opacity:0.7;}}
+/* MORE DRAWER */
+#more-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:190;backdrop-filter:blur(3px);}
+#more-backdrop.open{display:block;}
+#more-drawer{position:fixed;bottom:-290px;left:0;right:0;height:290px;background:rgba(6,26,11,0.98);border-top:2px solid var(--trim);border-radius:18px 18px 0 0;z-index:195;padding:10px 16px 24px;transition:bottom 0.32s cubic-bezier(0.34,1.3,0.64,1);backdrop-filter:blur(20px);}
+#more-drawer.open{bottom:0;}
+#more-drawer-handle{width:36px;height:4px;background:var(--borderg);border-radius:2px;margin:0 auto 12px;}
+.more-drawer-item{display:flex;align-items:center;gap:14px;padding:11px 14px;border-radius:10px;cursor:pointer;transition:background 0.18s;border-bottom:1px solid rgba(30,92,42,0.25);}
+.more-drawer-item:last-child{border-bottom:none;}
+.more-drawer-item:hover,.more-drawer-item:active{background:rgba(212,160,23,0.1);}
+.more-item-icon{font-size:20px;width:36px;height:36px;background:rgba(0,0,0,0.3);border:1px solid rgba(30,92,42,0.5);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.more-item-label{font-family:'Libre Baskerville',serif;font-size:14px;color:var(--ivory);}
+.more-item-sub{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--dim);margin-top:2px;}
+/* MOBILE */
+@media(max-width:1023px){#sidebar{width:64px}.sidebar-logo h1,.sidebar-logo p{display:none}.sidebar-logo{padding:16px 0;text-align:center}.sidebar-logo::after{content:'🎱';font-size:26px;display:block}.nav-item{padding:13px 0;justify-content:center}.nav-label{display:none}.nav-icon{width:auto;font-size:22px}.sidebar-footer{display:none}}
+@media(max-width:767px){
+  #sidebar{display:none}#bottom-nav{display:block}#main{padding-bottom:66px}
+  #player-trigger{bottom:88px !important;right:14px !important;}
+  #mini-player{bottom:145px !important;right:14px !important;width:min(280px,calc(100vw - 28px)) !important;}
+}
+/* MAP EMBED */
+#venues-map{display:none;height:200px;border-radius:12px;overflow:hidden;margin-bottom:14px;border:1px solid var(--borderg);}
+</style>
+</head>
+<body>
+<div id="debug-console" style="position:fixed;top:0;left:0;width:100%;height:30px;background:rgba(0,255,0,0.65);color:white;font-family:'DM Mono',monospace;font-size:11px;z-index:10000;pointer-events:none;padding:5px 15px;display:flex;align-items:center;backdrop-filter:blur(4px);font-weight:bold;">
+  System Status: Initializing v9.2 — PWA...
+</div>
+<div id="app">
+  <aside id="sidebar">
+    <div class="sidebar-logo"><h1>Billiards Buddy</h1><p>Executive Lounge</p></div>
+    <nav id="sidebar-nav">
+      <div class="nav-item active" onclick="showScreen('home')"><span class="nav-icon">&#127921;</span><span class="nav-label">Main Room</span></div>
+      <div class="nav-item" onclick="showScreen('venues')"><span class="nav-icon">&#128205;</span><span class="nav-label">Venues</span></div>
+      <div class="nav-item" onclick="showScreen('academy')"><span class="nav-icon">&#127891;</span><span class="nav-label">Academy</span></div>
+      <div class="nav-item" onclick="showScreen('score')"><span class="nav-icon">&#127942;</span><span class="nav-label">Scoreboard</span></div>
+      <div class="nav-item" onclick="showScreen('bracket')"><span class="nav-icon">&#128202;</span><span class="nav-label">Brackets</span></div>
+      <div class="nav-item" onclick="showScreen('timer')"><span class="nav-icon">&#9201;</span><span class="nav-label">Shot Clock</span></div>
+      <div class="nav-item" onclick="showScreen('shop')"><span class="nav-icon">&#128188;</span><span class="nav-label">Pro Shop</span></div>
+      <div class="nav-item" onclick="showScreen('rules')"><span class="nav-icon">&#128203;</span><span class="nav-label">Rules</span></div>
+      <div class="nav-item" onclick="showScreen('profile')"><span class="nav-icon">&#128100;</span><span class="nav-label">My Profile</span></div>
+    </nav>
+    <div class="sidebar-footer">v9.2 &#8212; PWA</div>
+  </aside>
+  <main id="main">
+
+    <!-- HOME -->
+    <div class="screen active" id="screen-home">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Main Room</div><h2>Billiards Buddy</h2></div>
+      <div class="content">
+        <div class="card gold-card"><h3 style="font-family:'Playfair Display';">Welcome to the Clubhouse</h3>
+          <p style="margin-top:8px;font-size:14px;opacity:0.85;">All five roadmap phases complete. Use the sidebar or bottom nav to explore every module.</p>
+        </div>
+        <div class="grid-3" style="margin-top:14px;">
+          <div class="card clickable" onclick="showScreen('venues')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#128205;</div><div style="font-size:12px;color:var(--dim)">Venues</div></div>
+          <div class="card clickable" onclick="showScreen('score')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#127942;</div><div style="font-size:12px;color:var(--dim)">Hustle</div></div>
+          <div class="card clickable" onclick="showScreen('academy')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#127891;</div><div style="font-size:12px;color:var(--dim)">Academy</div></div>
+          <div class="card clickable" onclick="showScreen('bracket')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#128202;</div><div style="font-size:12px;color:var(--dim)">Brackets</div></div>
+          <div class="card clickable" onclick="showScreen('shop')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#128188;</div><div style="font-size:12px;color:var(--dim)">Pro Shop</div></div>
+          <div class="card clickable" onclick="showScreen('rules')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#128203;</div><div style="font-size:12px;color:var(--dim)">Rules</div></div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- VENUES -->
+    <div class="screen" id="screen-venues">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Local Discovery</div><h2>Nearby Venues</h2></div>
+      <div class="content">
+        <div class="card gold-card" style="display:flex;align-items:center;justify-content:space-between;padding:12px;">
+          <div style="display:flex;align-items:center;gap:8px;"><span>&#128205;</span><span id="location-status" style="font-size:11px;font-family:'DM Mono';color:var(--gold2);">Acquiring GPS...</span></div>
+          <button class="pill active" onclick="renderVenues()">Refresh</button>
+        </div>
+        <div id="venues-map"></div>
+        <div id="venue-filters" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <div class="pill active" onclick="filterVenues('all',this)">All</div>
+          <div class="pill" onclick="filterVenues('pro',this)">Pro Tables</div>
+          <div class="pill" onclick="filterVenues('bar',this)">Bar/Lounge</div>
+        </div>
+        <div id="venue-list"></div>
+      </div></div>
+    </div>
+
+    <!-- ACADEMY -->
+    <div class="screen" id="screen-academy">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Professional Instruction</div><h2>The Academy</h2></div>
+      <div class="content">
+        <div class="card" style="padding:0;overflow:hidden;border:1px solid var(--gold);background:#000;margin-bottom:20px;border-radius:12px;">
+          <div style="aspect-ratio:16/9;background:#111;display:flex;align-items:center;justify-content:center;position:relative;">
+            <div id="main-player" style="text-align:center;"><span style="font-size:40px;display:block;margin-bottom:10px;">&#127901;</span><span style="font-family:'DM Mono';color:var(--dim);font-size:11px;">Select an educational segment to stream</span></div>
+            <div style="position:absolute;bottom:0;left:0;right:0;padding:15px;background:linear-gradient(transparent,rgba(0,0,0,0.85));pointer-events:none;"><h4 id="active-lesson-title" style="color:var(--ivory);font-family:'Playfair Display';margin:0;">Welcome to Masterclass Streams</h4></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
+          <div class="pill active" onclick="filterLessons('Beginner',this)">Beginner</div>
+          <div class="pill" onclick="filterLessons('Intermediate',this)">Intermediate</div>
+          <div class="pill" onclick="filterLessons('Advanced',this)">Advanced</div>
+        </div>
+        <div id="lesson-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div></div>
+    </div>
+
+    <!-- BRACKETS -->
+    <div class="screen" id="screen-bracket">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Tournament Grid</div><h2>Brackets Engine</h2></div>
+      <div class="content">
+        <div class="card gold-card" style="padding:15px;margin-bottom:20px;">
+          <div style="display:flex;gap:10px;">
+            <input type="number" id="player-count" value="4" min="2" max="16" style="width:60px;background:rgba(0,0,0,0.3);border:1px solid var(--dim);color:var(--ivory);padding:8px;border-radius:6px;outline:none;font-family:'DM Mono';text-align:center;">
+            <button class="btn btn-gold" onclick="generateBracket()" style="flex-grow:1;font-weight:bold;padding:10px;border-radius:6px;">Generate 8-Ball Tree</button>
+          </div>
+        </div>
+        <div id="bracket-display"></div>
+      </div></div>
+    </div>
+
+    <!-- SCORE -->
+    <div class="screen" id="screen-score">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Live Match Counter</div><h2>The Hustle</h2></div>
+      <div class="content">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;">
+          <div class="card" style="text-align:center;padding:20px;background:rgba(0,0,0,0.2);">
+            <div style="font-family:'DM Mono';color:var(--gold2);font-size:10px;margin-bottom:10px;">HOME</div>
+            <div id="p1-score" style="font-size:64px;font-family:'Playfair Display';color:var(--ivory);line-height:1;">0</div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+              <button class="btn btn-gold" onclick="adjustScore('p1',1)" style="flex:2;font-weight:bold;">+</button>
+              <button class="btn btn-felt" onclick="adjustScore('p1',-1)" style="flex:1;">-</button>
+            </div>
+          </div>
+          <div class="card" style="text-align:center;padding:20px;background:rgba(0,0,0,0.2);">
+            <div style="font-family:'DM Mono';color:var(--dim);font-size:10px;margin-bottom:10px;">VISITOR</div>
+            <div id="p2-score" style="font-size:64px;font-family:'Playfair Display';color:var(--ivory);line-height:1;">0</div>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+              <button class="btn btn-gold" onclick="adjustScore('p2',1)" style="flex:2;font-weight:bold;">+</button>
+              <button class="btn btn-felt" onclick="adjustScore('p2',-1)" style="flex:1;">-</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="padding:15px;border:1px solid var(--gold);">
+          <button class="btn btn-gold" style="width:100%;padding:15px;font-weight:bold;margin-bottom:10px;" onclick="finalizeMatch()">Finish &amp; Log Match</button>
+          <button class="btn" style="width:100%;background:transparent;border:1px solid var(--dim);color:var(--dim);" onclick="resetMatch()">Reset Rack</button>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- TIMER -->
+    <div class="screen" id="screen-timer">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Tournament Utilities</div><h2>Shot Clock</h2></div>
+      <div class="content">
+        <div class="card" style="text-align:center;padding:40px 20px;">
+          <div id="clock-display" style="font-size:80px;font-family:'DM Mono';color:var(--gold2);font-weight:bold;margin-bottom:10px;">30</div>
+          <div style="font-family:'DM Mono';font-size:11px;color:var(--dim);margin-bottom:25px;">SECONDS</div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:15px;">
+            <button class="pill active" id="preset-30" onclick="setClockPreset(30,this)">30s</button>
+            <button class="pill" id="preset-45" onclick="setClockPreset(45,this)">45s</button>
+            <button class="pill" id="preset-60" onclick="setClockPreset(60,this)">60s</button>
+            <button class="pill" id="preset-90" onclick="setClockPreset(90,this)">90s</button>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="btn btn-gold" onclick="startClock()" id="btn-start" style="padding:12px 28px;font-weight:bold;">Start</button>
+            <button class="btn btn-felt" onclick="resetClock()" style="padding:12px 28px;">Reset</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- SHOP -->
+    <div class="screen" id="screen-shop">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Premium Gear</div><h2>Marketplace</h2></div>
+      <div class="content">
+        <div id="cart-bar" style="display:none;justify-content:space-between;align-items:center;background:rgba(212,160,23,0.1);border:1px solid var(--borderg);border-radius:10px;padding:10px 16px;margin-bottom:14px;">
+          <span style="font-family:'DM Mono';font-size:12px;color:var(--gold);">Cart: <span id="cart-count">0</span> items</span>
+          <div><span id="cart-total" style="font-family:'DM Mono';font-weight:bold;margin-right:15px;">$0.00</span><button class="btn btn-gold" onclick="checkout()" style="padding:6px 15px;font-size:11px;">Checkout</button></div>
+        </div>
+        <div id="shop-filters" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <div class="pill active" onclick="setShopCat('all',this)">All</div>
+          <div class="pill" onclick="setShopCat('cues',this)">Cues</div>
+          <div class="pill" onclick="setShopCat('acc',this)">Accessories</div>
+          <div class="pill" onclick="setShopCat('chalk',this)">Chalk</div>
+        </div>
+        <div id="products-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:15px;"></div>
+      </div></div>
+    </div>
+
+    <!-- RULES -->
+    <div class="screen" id="screen-rules">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Official Regulations</div><h2>Rules Directory</h2></div>
+      <div class="content">
+        <div class="card gold-card" style="padding:14px;margin-bottom:14px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="rules-search" placeholder="Search rules..." oninput="filterRules()" style="flex:1;background:rgba(0,0,0,0.35);border:1px solid var(--borderg);color:var(--ivory);padding:9px 13px;border-radius:8px;outline:none;font-family:'DM Mono',monospace;font-size:12px;">
+            <span style="font-family:'DM Mono';font-size:10px;color:var(--dim);" id="rules-count"></span>
+          </div>
+        </div>
+        <div id="rules-filters" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <div class="pill active" onclick="setRulesGame('all',this)">All Games</div>
+          <div class="pill" onclick="setRulesGame('8ball',this)">8-Ball</div>
+          <div class="pill" onclick="setRulesGame('9ball',this)">9-Ball</div>
+          <div class="pill" onclick="setRulesGame('snooker',this)">Snooker</div>
+        </div>
+        <div id="rules-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div></div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="screen" id="screen-profile">
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Player Account</div><h2 id="display-name">Welcome, Player</h2></div>
+      <div class="content">
+        <div class="card gold-card" style="padding:20px;border:1px solid var(--gold);margin-bottom:20px;">
+          <div class="grid-3">
+            <div class="stat-card"><div class="stat-value" id="stat-games">0</div><div class="stat-label">Wins</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-level">BEG</div><div style="font-size:10px;color:var(--dim);font-family:'DM Mono';margin-top:4px;">RANK</div></div>
+            <div class="stat-card"><div class="stat-value" id="stat-hours">0</div><div class="stat-label">Hours</div></div>
+          </div>
+        </div>
+        <div class="card" style="padding:20px;margin-bottom:14px;">
+          <div style="font-family:'DM Mono';font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Update Identity</div>
+          <input type="text" id="edit-name" placeholder="Enter Name" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--dim);color:var(--ivory);padding:12px;border-radius:8px;margin-bottom:12px;outline:none;font-family:'DM Mono';">
+          <button class="btn btn-gold" onclick="updateName()" style="width:100%;font-weight:bold;">Commit Data String</button>
+        </div>
+        <div class="card" style="padding:14px;">
+          <div style="font-family:'DM Mono';font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Saved Venues (<span id="fav-count">0</span>)</div>
+          <div id="fav-venues-list" style="font-size:12px;color:var(--dim);font-family:'DM Mono';">No saved venues yet.</div>
+        </div>
+      </div></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MINI PLAYER v9.2 — Continuous YouTube Stream -->
+<style>
+#mini-player{position:fixed;bottom:90px;right:20px;width:300px;background:#000;border:2px solid var(--gold);border-radius:10px;z-index:9999;box-shadow:0 12px 40px rgba(0,0,0,0.85);display:none;overflow:hidden;transition:width 0.3s;font-family:"DM Mono",monospace;}
+#mini-player.expanded{width:360px}
+#mp-header{background:linear-gradient(90deg,var(--wood),var(--wood2));border-bottom:1px solid var(--borderg);padding:5px 8px;display:flex;align-items:center;gap:5px;}
+#mp-live-dot{width:7px;height:7px;border-radius:50%;background:#ff4747;flex-shrink:0;box-shadow:0 0 6px #ff4747;animation:pulse-red 1.5s infinite;}
+#mp-channel-label{flex:1;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-ctrl{background:none;border:none;cursor:pointer;color:var(--dim);font-size:13px;padding:2px 3px;line-height:1;transition:color 0.15s;}
+.mp-ctrl:hover{color:var(--ivory);}
+#mp-video-wrap{position:relative;width:100%;padding-top:56.25%;background:#000;}
+#mp-iframe{position:absolute;inset:0;width:100%;height:100%;border:none;}
+#mp-mute-nudge{display:none;position:absolute;bottom:0;left:0;right:0;padding:8px;background:linear-gradient(transparent,rgba(0,0,0,0.65));cursor:pointer;}
+#mp-unmute-btn{background:rgba(6,26,11,0.92);border:1px solid var(--gold);border-radius:16px;padding:4px 11px;font-family:"DM Mono",monospace;font-size:9px;color:var(--gold2);letter-spacing:1px;cursor:pointer;}
+#mp-now{background:rgba(6,26,11,0.96);padding:7px 10px;border-top:1px solid rgba(200,134,10,0.25);}
+#mp-now-title{font-size:10px;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;}
+#mp-now-sub{font-size:9px;color:var(--dim);}
+#mp-tabs{display:flex;background:rgba(6,26,11,0.96);border-top:1px solid rgba(200,134,10,0.2);}
+.mp-tab{flex:1;padding:6px 2px;text-align:center;font-size:8px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;color:var(--dim);border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-left:none;border-right:none;border-top:none;}
+.mp-tab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
+.mp-tab:hover{color:var(--ivory);}
+#mp-playlist{background:rgba(6,26,11,0.97);max-height:0;overflow:hidden;transition:max-height 0.35s ease;}
+#mp-playlist.open{max-height:220px;overflow-y:auto;border-top:1px solid rgba(200,134,10,0.2);}
+#mp-playlist::-webkit-scrollbar{width:3px;}
+#mp-playlist::-webkit-scrollbar-thumb{background:var(--borderg);}
+.mp-track{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;border-bottom:1px solid rgba(30,92,42,0.2);transition:background 0.15s;}
+.mp-track:hover{background:rgba(255,255,255,0.05);}
+.mp-track.active{background:rgba(212,160,23,0.12);}
+.mp-track-num{font-size:9px;color:var(--dim);width:14px;text-align:right;flex-shrink:0;}
+.mp-track-info{flex:1;min-width:0;}
+.mp-track-title{font-size:10px;color:var(--ivory);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mp-track-meta{font-size:9px;color:var(--dim);margin-top:1px;}
+.mp-track-dur{font-size:9px;color:var(--dim);flex-shrink:0;}
+.mp-track.active .mp-track-title{color:var(--gold2);}
+#player-trigger{position:fixed;bottom:95px;right:20px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;width:46px;height:46px;border-radius:50%;z-index:9998;box-shadow:0 4px 20px rgba(0,0,0,0.6);color:var(--deep);cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:transform 0.2s;}
+#player-trigger:hover{transform:scale(1.08);}
+@media(max-width:767px){
+  #mini-player{bottom:145px!important;right:14px!important;width:calc(100vw - 28px)!important;max-width:340px;}
+  #player-trigger{bottom:88px!important;right:14px!important;}
+}
+</style>
+
+<div id="mini-player">
+  <div id="mp-header">
+    <div id="mp-live-dot"></div>
+    <span id="mp-channel-label">LIVE: PRO TOUR</span>
+    <button class="mp-ctrl" id="mp-btn-list" onclick="toggleMpPlaylist()" title="Playlist">&#9776;</button>
+    <button class="mp-ctrl" onclick="mpPrev()" title="Prev">&#9664;</button>
+    <button class="mp-ctrl" onclick="mpNext()" title="Next">&#9654;</button>
+    <button class="mp-ctrl" id="mp-btn-exp" onclick="toggleMpExpand()" title="Expand">&#10064;</button>
+    <button class="mp-ctrl" onclick="toggleMiniPlayer()" title="Close">&#10005;</button>
+  </div>
+  <div id="mp-video-wrap">
+    <iframe id="mp-iframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+    <div id="mp-mute-nudge" onclick="mpUnmute()">
+      <button id="mp-unmute-btn">&#128263; TAP TO UNMUTE</button>
+    </div>
+  </div>
+  <div id="mp-now">
+    <div id="mp-now-title">Loading stream...</div>
+    <div id="mp-now-sub">BILLIARDS BUDDY &middot; LIVE &amp; HIGHLIGHTS</div>
+  </div>
+  <div id="mp-tabs">
+    <button class="mp-tab active" onclick="mpSwitchChannel('live',this)">&#128308; Live</button>
+    <button class="mp-tab" onclick="mpSwitchChannel('shots',this)">&#127919; Shots</button>
+    <button class="mp-tab" onclick="mpSwitchChannel('events',this)">&#127942; Events</button>
+    <button class="mp-tab" onclick="mpSwitchChannel('lessons',this)">&#127891; Lessons</button>
+  </div>
+  <div id="mp-playlist"></div>
+</div>
+<button id="player-trigger" onclick="toggleMiniPlayer()">&#128250;</button>
+
+<!-- BOTTOM NAV -->
+<div id="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="bn-item active" onclick="showScreen('home')"><span class="bn-icon">&#127921;</span><span class="bn-label">Main</span></button>
+    <button class="bn-item" onclick="showScreen('venues')"><span class="bn-icon">&#128205;</span><span class="bn-label">Venues</span></button>
+    <button class="bn-item" onclick="showScreen('score')"><span class="bn-icon">&#127942;</span><span class="bn-label">Score</span></button>
+    <button class="bn-item" onclick="showScreen('shop')"><span class="bn-icon">&#128188;</span><span class="bn-label">Shop</span></button>
+    <button class="bn-item" onclick="showScreen('profile')"><span class="bn-icon">&#128100;</span><span class="bn-label">Profile</span></button>
+    <button class="bn-item" id="bn-more" onclick="toggleMoreDrawer()"><span class="bn-icon">&#8943;</span><span class="bn-label">More</span></button>
+  </div>
+</div>
+<div id="more-backdrop" onclick="closeMoreDrawer()"></div>
+<div id="more-drawer">
+  <div id="more-drawer-handle"></div>
+  <div style="padding:8px 0 4px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:10px;">MORE MODULES</div>
+  <div class="more-drawer-item" onclick="drawerNav('academy')"><span class="more-item-icon">&#127891;</span><div><div class="more-item-label">Academy</div><div class="more-item-sub">Masterclass Training Streams</div></div></div>
+  <div class="more-drawer-item" onclick="drawerNav('bracket')"><span class="more-item-icon">&#128202;</span><div><div class="more-item-label">Brackets</div><div class="more-item-sub">Tournament Tree Generator</div></div></div>
+  <div class="more-drawer-item" onclick="drawerNav('timer')"><span class="more-item-icon">&#9201;</span><div><div class="more-item-label">Shot Clock</div><div class="more-item-sub">Adjustable Countdown Timer</div></div></div>
+  <div class="more-drawer-item" onclick="drawerNav('rules')"><span class="more-item-icon">&#128203;</span><div><div class="more-item-label">Rules Directory</div><div class="more-item-sub">WPA Interactive Database</div></div></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// NAVIGATION ENGINE
+// ════════════════════════════════════════════════════════
+function showScreen(id) {
+    const debug = document.getElementById('debug-console');
+    const all = ['home','venues','academy','timer','shop','rules','profile','score','bracket'];
+    all.forEach(s => { const el = document.getElementById('screen-'+s); if(el) el.classList.remove('active'); });
+    const t = document.getElementById('screen-'+id);
+    if(t) {
+        t.classList.add('active'); window.scrollTo(0,0);
+        if(debug){ debug.style.background="rgba(30,140,50,0.85)"; debug.textContent="Routing OK -> [screen-"+id+"] MOUNTED"; }
+    } else {
+        if(debug){ debug.style.background="rgba(255,0,0,0.7)"; debug.textContent="ERROR: [screen-"+id+"] NOT FOUND"; }
+    }
+    document.querySelectorAll('.nav-item,.bn-item').forEach(btn => {
+        btn.classList.remove('active');
+        const a = btn.getAttribute('onclick');
+        if(a && a.includes("'"+id+"'")) btn.classList.add('active');
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// PERSISTENCE LAYER
+// ════════════════════════════════════════════════════════
+const DEFAULT_PROFILE = { name:"Hustler Pro", level:"Beginner", favoriteVenues:[], stats:{ gamesWon:0, shotsTimed:0, practiceHours:0 } };
+let userProfile = JSON.parse(localStorage.getItem('bb_profile')) || JSON.parse(JSON.stringify(DEFAULT_PROFILE));
+if (!userProfile.favoriteVenues) userProfile.favoriteVenues = [];
+
+function saveProfile() { localStorage.setItem('bb_profile', JSON.stringify(userProfile)); updateProfileUI(); }
+
+function updateProfileUI() {
+    const nameEl=document.getElementById('display-name'), inputEl=document.getElementById('edit-name');
+    if(nameEl) nameEl.textContent = "Clubhouse: " + userProfile.name;
+    if(inputEl) inputEl.value = userProfile.name;
+    const sg=document.getElementById('stat-games'), sl=document.getElementById('stat-level'), sh=document.getElementById('stat-hours');
+    if(sg) sg.textContent = userProfile.stats.gamesWon;
+    if(sl) sl.textContent = userProfile.level.substring(0,3).toUpperCase();
+    if(sh) sh.textContent = Math.round(userProfile.stats.practiceHours * 10) / 10;
+    const favCountEl = document.getElementById('fav-count');
+    const favListEl = document.getElementById('fav-venues-list');
+    if(favCountEl) favCountEl.textContent = userProfile.favoriteVenues.length;
+    if(favListEl) {
+        if (!userProfile.favoriteVenues.length) { favListEl.textContent = "No saved venues yet."; }
+        else {
+            const names = userProfile.favoriteVenues.map(id => { const v = VENUES.find(x => x.id===id); return v ? v.name : 'Unknown'; });
+            favListEl.innerHTML = names.map(n => '<div style="padding:5px 0;border-bottom:1px solid rgba(30,92,42,0.2);">&#10084; ' + n + '</div>').join('');
+        }
+    }
+}
+
+function updateName() {
+    const n = document.getElementById('edit-name').value;
+    if(n.trim()) { userProfile.name = n; saveProfile(); const d=document.getElementById('debug-console'); if(d) d.textContent="Identity committed to localStorage."; }
+}
+
+// ════════════════════════════════════════════════════════
+// SCOREBOARD
+// ════════════════════════════════════════════════════════
+let currentMatch = {p1:0, p2:0};
+function adjustScore(p,a){ currentMatch[p]=Math.max(0,currentMatch[p]+a); document.getElementById(p+'-score').textContent=currentMatch[p]; if(window.navigator.vibrate) window.navigator.vibrate(40); }
+function resetMatch(){ currentMatch={p1:0,p2:0}; document.getElementById('p1-score').textContent="0"; document.getElementById('p2-score').textContent="0"; }
+function finalizeMatch(){
+    if(currentMatch.p1===0 && currentMatch.p2===0) return;
+    if(currentMatch.p1 > currentMatch.p2){ userProfile.stats.gamesWon+=1; alert("Victory logged to profile!"); }
+    else { alert("Match closed. Loss recorded."); }
+    saveProfile(); resetMatch();
+}
+
+// ════════════════════════════════════════════════════════
+// VENUES
+// ════════════════════════════════════════════════════════
+const VENUES = [
+    { id:1, name:"The Velvet Pocket", type:"pro", rating:4.9, dist:"0.8 mi", tables:12, lat:33.6846, lng:-117.8265, features:["9-ft Diamonds","Full Lounge"] },
+    { id:2, name:"Chalky's Tavern", type:"bar", rating:4.2, dist:"1.4 mi", tables:4, lat:33.6695, lng:-117.8230, features:["Pool League Nights","Drinks"] },
+    { id:3, name:"Elite Billiards Club", type:"pro", rating:4.7, dist:"2.1 mi", tables:20, lat:33.6612, lng:-117.8340, features:["Match Tables","Pro-Shop"] }
+];
+
+function filterVenues(type, el){
+    document.querySelectorAll('#venue-filters .pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active'); renderVenues(type);
+}
+
+function renderVenues(filter){
+    if(filter===undefined) filter='all';
+    const c = document.getElementById('venue-list'); if(!c) return;
+    const favs = userProfile.favoriteVenues || [];
+    const f = filter==='all' ? VENUES : VENUES.filter(v=>v.type===filter);
+    let html = '';
+    f.forEach(v => {
+        const isFav = favs.includes(v.id);
+        html += '<div class="card" style="padding:15px;margin-bottom:10px;background:rgba(255,255,255,0.03);">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+            + '<h4 style="font-family:\'Playfair Display\';color:var(--ivory);flex:1;">' + v.name + '</h4>'
+            + '<div style="display:flex;align-items:center;gap:8px;">'
+            + '<button onclick="toggleFaveVenue(' + v.id + ')" style="background:none;border:none;cursor:pointer;font-size:20px;padding:0;line-height:1;">' + (isFav ? '&#10084;&#65039;' : '&#9825;') + '</button>'
+            + '<button onclick="openVenueMap(\'' + v.name.replace(/'/g,"\\'") + '\')" style="background:rgba(212,160,23,0.15);border:1px solid var(--borderg);border-radius:6px;cursor:pointer;font-family:\'DM Mono\';font-size:10px;padding:4px 8px;color:var(--gold);">&#128205; Map</button>'
+            + '<span style="color:var(--gold);font-family:\'DM Mono\';font-size:12px;">' + v.dist + '</span>'
+            + '</div></div>'
+            + '<p style="font-size:11px;color:var(--dim);margin:5px 0;">' + v.features.join(' • ') + '</p>'
+            + '<div style="font-size:11px;color:var(--gold2);">★ ' + v.rating + ' — ' + v.tables + ' Tables' + (isFav?' <span style="color:#e74c3c;">❤ Saved</span>':'') + '</div>'
+            + '</div>';
+    });
+    c.innerHTML = html;
+}
+
+function toggleFaveVenue(id) {
+    if (!userProfile.favoriteVenues) userProfile.favoriteVenues = [];
+    const idx = userProfile.favoriteVenues.indexOf(id);
+    if(idx === -1) userProfile.favoriteVenues.push(id);
+    else userProfile.favoriteVenues.splice(idx,1);
+    saveProfile();
+    const af = document.querySelector('#venue-filters .pill.active');
+    const ft = af ? af.textContent.toLowerCase() : 'all';
+    const map = {'all':'all','pro tables':'pro','bar/lounge':'bar'};
+    renderVenues(map[ft]||'all');
+}
+
+function openVenueMap(name) {
+    window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(name + ' billiards pool'), '_blank');
+}
+
+function recalcVenueDistances(lat, lng) {
+    function hav(la1,lo1,la2,lo2){ const R=3958.8,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2; return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1); }
+    VENUES.forEach(v=>{ if(v.lat&&v.lng) v.dist=hav(lat,lng,v.lat,v.lng)+" mi"; });
+    renderVenues();
+    const mapDiv = document.getElementById('venues-map');
+    if(mapDiv){
+        mapDiv.style.display='block';
+        mapDiv.innerHTML='<iframe src="https://www.openstreetmap.org/export/embed.html?bbox='+(lng-0.05)+','+(lat-0.05)+','+(lng+0.05)+','+(lat+0.05)+'&layer=mapnik&marker='+lat+','+lng+'" style="width:100%;height:100%;border:none;" loading="lazy" title="Your location map"></iframe>';
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// ACADEMY
+// ════════════════════════════════════════════════════════
+const LESSON_DATA = [
+    {id:1, ytId:"kCxKHl7OIIQ", title:"Proper Structural Stance", level:"Beginner", duration:"4:20"},
+    {id:2, ytId:"RCVvjkFlEbU", title:"Ghost Ball Deviation Targeting", level:"Beginner", duration:"6:15"},
+    {id:3, ytId:"j9PgFR4XKQE", title:"Low-Axis Draw Shot Spins", level:"Intermediate", duration:"8:45"},
+    {id:4, ytId:"VJYRDd_DLZY", title:"Three-Rail Breakout Paths", level:"Advanced", duration:"12:30"}
+];
+function filterLessons(level,el){ document.querySelectorAll('#screen-academy .pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); renderLessons(level); }
+function renderLessons(level){
+    if(!level) level="Beginner";
+    const list=document.getElementById('lesson-list'); if(!list) return;
+    const f=LESSON_DATA.filter(l=>l.level===level);
+    list.innerHTML=f.map(l=>'<div class="card clickable" onclick="loadVideo('+l.id+')" style="display:flex;align-items:center;gap:15px;padding:12px;">'
+        +'<div style="width:35px;height:35px;background:var(--deep);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--gold);flex-shrink:0;">&#9654;</div>'
+        +'<div><div style="color:var(--ivory);font-family:\'Playfair Display\';font-size:14px;">'+l.title+'</div><div style="color:var(--dim);font-family:\'DM Mono\';font-size:10px;">'+l.duration+'</div></div>'
+        +'<div id="check-'+l.id+'" style="margin-left:auto;color:var(--gold);opacity:0.15;">&#10003;</div></div>').join('');
+}
+function loadVideo(id){
+    const l=LESSON_DATA.find(x=>x.id===id);
+    document.getElementById('active-lesson-title').textContent=l.title;
+    const origin=(window.location.protocol==='file:')
+        ?'https://www.youtube.com'
+        :(window.location.origin||'https://localhost');
+    const mp=document.getElementById('main-player');
+    mp.style.cssText='position:absolute;inset:0;';
+    mp.innerHTML='<iframe src="https://www.youtube.com/embed/'+l.ytId
+        +'?autoplay=1&mute=1&rel=0&modestbranding=1&enablejsapi=1&playsinline=1&origin='+encodeURIComponent(origin)
+        +'" style="width:100%;height:100%;border:none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+    userProfile.stats.practiceHours+=0.5;
+    const ck=document.getElementById('check-'+id); if(ck) ck.style.opacity="1";
+    saveProfile();
+}
+
+// ════════════════════════════════════════════════════════
+// BRACKETS
+// ════════════════════════════════════════════════════════
+function generateBracket(){
+    const count=parseInt(document.getElementById('player-count').value);
+    const display=document.getElementById('bracket-display');
+    let html='<div style="display:flex;gap:20px;align-items:center;padding:15px;background:rgba(0,0,0,0.2);border-radius:8px;overflow-x:auto;"><div style="display:flex;flex-direction:column;gap:15px;">';
+    for(let i=1;i<=count;i+=2){
+        html+='<div style="border-left:2px solid var(--gold);padding-left:8px;">'
+            +'<div style="background:rgba(255,255,255,0.05);padding:6px;font-size:10px;width:110px;margin-bottom:4px;font-family:\'DM Mono\';">Seed '+i+'</div>'
+            +'<div style="background:rgba(255,255,255,0.05);padding:6px;font-size:10px;width:110px;font-family:\'DM Mono\';">'+(i+1<=count?'Seed '+(i+1):'BYE')+'</div></div>';
+    }
+    html+='</div><div style="color:var(--gold);font-weight:bold;">→</div><div style="font-family:\'DM Mono\';font-size:11px;color:var(--dim);">Round 2 Generated</div></div>';
+    display.innerHTML=html;
+    userProfile.stats.tournamentsRun = (userProfile.stats.tournamentsRun||0) + 1;
+    saveProfile();
+}
+
+// ════════════════════════════════════════════════════════
+// SHOT CLOCK
+// ════════════════════════════════════════════════════════
+let clockTime=30, clockMax=30, clockInterval=null, clockRunning=false;
+function setClockPreset(s,el){
+    document.querySelectorAll('#screen-timer .pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active'); clockMax=s; resetClock();
+}
+function startClock(){
+    if(clockRunning){ clearInterval(clockInterval); clockRunning=false; document.getElementById('btn-start').textContent='Start'; return; }
+    if(clockTime<=0) resetClock();
+    clockRunning=true; document.getElementById('btn-start').textContent='Pause';
+    clockInterval=setInterval(()=>{
+        clockTime--;
+        const d=document.getElementById('clock-display');
+        if(d) d.textContent=clockTime;
+        if(d){ d.style.color=clockTime<=5?'var(--red2)':clockTime<=10?'var(--gold)':'var(--gold2)'; }
+        if(clockTime<=0){
+            clearInterval(clockInterval); clockRunning=false;
+            if(window.navigator.vibrate) window.navigator.vibrate([200,100,200]);
+            document.getElementById('btn-start').textContent='Start';
+            userProfile.stats.shotsTimed=(userProfile.stats.shotsTimed||0)+1;
+            saveProfile();
+        }
+    },1000);
+}
+function resetClock(){
+    clearInterval(clockInterval); clockRunning=false; clockTime=clockMax;
+    const d=document.getElementById('clock-display');
+    if(d){ d.textContent=clockMax; d.style.color='var(--gold2)'; }
+    document.getElementById('btn-start').textContent='Start';
+}
+
+// ════════════════════════════════════════════════════════
+// MARKETPLACE
+// ════════════════════════════════════════════════════════
+const PROD_API_DATA = [
+    {id:101, name:"Predator Revo Carbon Cue", price:499.00, cat:"cues", url:"https://www.amazon.com/s?k=predator+revo+carbon+cue&tag=billiardsbuddy-20"},
+    {id:102, name:"Kamui Black Chalk", price:14.99, cat:"chalk", url:"https://www.amazon.com/s?k=kamui+black+chalk&tag=billiardsbuddy-20"},
+    {id:103, name:"Aramith Pro Ball Set", price:349.00, cat:"acc", url:"https://www.amazon.com/s?k=aramith+pro+ball+set&tag=billiardsbuddy-20"},
+    {id:104, name:"Master Chalk 12-Pack", price:12.50, cat:"chalk", url:"https://www.amazon.com/s?k=master+chalk+pool&tag=billiardsbuddy-20"},
+    {id:105, name:"Lucasi Custom Cue LHC97", price:199.00, cat:"cues", url:"https://www.amazon.com/s?k=lucasi+custom+cue&tag=billiardsbuddy-20"},
+    {id:106, name:"Predator Leather Glove", price:24.99, cat:"acc", url:"https://www.amazon.com/s?k=predator+pool+glove&tag=billiardsbuddy-20"}
+];
+
+let cart = [];
+let activeShopCat = 'all';
+
+function loadCart(){ const s=localStorage.getItem('bb_cart'); if(s){ cart=JSON.parse(s); updateCartBar(); } }
+function saveCart(){ localStorage.setItem('bb_cart', JSON.stringify(cart)); }
+function updateCartBar(){
+    if(!cart.length){ document.getElementById('cart-bar').style.display='none'; return; }
+    document.getElementById('cart-count').textContent=cart.length;
+    const t=cart.reduce((s,i)=>s+i.price,0);
+    document.getElementById('cart-total').textContent='$'+t.toFixed(2);
+    document.getElementById('cart-bar').style.display='flex';
+}
+
+function setShopCat(cat,el){
+    document.querySelectorAll('#shop-filters .pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active'); activeShopCat=cat; renderProducts();
+}
+
+function renderProducts(){
+    const g=document.getElementById('products-grid'); if(!g) return;
+    const vis=activeShopCat==='all'?PROD_API_DATA:PROD_API_DATA.filter(p=>p.cat===activeShopCat);
+    let html='';
+    vis.forEach(p=>{
+        const inCart=cart.some(c=>c.id===p.id);
+        html+='<div style="padding:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(30,92,42,0.5);border-radius:10px;display:flex;flex-direction:column;">'
+            +'<h4 style="font-family:\'Playfair Display\';font-size:14px;margin-bottom:6px;">'+p.name+'</h4>'
+            +'<div style="font-family:\'DM Mono\';font-size:10px;color:var(--dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">'+p.cat+'</div>'
+            +'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;">'
+            +'<span style="color:var(--gold);font-family:\'DM Mono\';font-size:13px;font-weight:700;">$'+p.price.toFixed(2)+'</span>'
+            +'<div style="display:flex;gap:5px;">'
+            +'<button onclick="addToCart('+p.id+','+p.price+')" style="padding:5px 8px;font-size:10px;cursor:pointer;border-radius:6px;background:'+(inCart?'rgba(39,174,96,0.25)':'rgba(255,255,255,0.08)')+';color:'+(inCart?'var(--green2)':'var(--ivory)')+';border:1px solid '+(inCart?'var(--green2)':'rgba(30,92,42,0.6)')+';">'+(inCart?'&#10003; Added':'+ Cart')+'</button>'
+            +'<a href="'+p.url+'" target="_blank" rel="noopener" style="padding:5px 7px;font-size:11px;border-radius:6px;background:rgba(212,160,23,0.15);color:var(--gold);border:1px solid var(--borderg);text-decoration:none;" title="View on Amazon">&#8599;</a>'
+            +'</div></div></div>';
+    });
+    g.innerHTML=html;
+}
+
+function addToCart(id,price){
+    if(cart.some(c=>c.id===id)){ cart=cart.filter(c=>c.id!==id); }
+    else { cart.push({id,price}); }
+    saveCart(); updateCartBar(); renderProducts();
+}
+
+function checkout(){
+    if(confirm('Redirecting to Amazon with tracking ID: billiardsbuddy-20')){ cart=[]; saveCart(); updateCartBar(); }
+}
+
+// ════════════════════════════════════════════════════════
+// RULES
+// ════════════════════════════════════════════════════════
+const RULES_DATA = [
+    {game:"8ball", section:"The Break", rule:"The breaker must strike the rack of 15 balls with the cue ball. If the breaker pockets a ball or drives four balls to the rails, the break is legal."},
+    {game:"8ball", section:"Choosing Groups", rule:"Groups (solids 1–7 or stripes 9–15) are not determined until a player legally pockets a called ball after the break."},
+    {game:"8ball", section:"Legal Shot", rule:"A player must hit one of their own group balls first and then either pocket a ball or drive any ball to a rail."},
+    {game:"8ball", section:"Fouls", rule:"Fouls include: scratching (cue ball in pocket), not hitting your own ball first, no rail contact after the first hit, or jumping the cue ball off the table."},
+    {game:"8ball", section:"Winning", rule:"Pocket the 8-ball after legally pocketing all of your group balls. You must call the pocket. Pocketing the 8-ball on the break or early is a loss."},
+    {game:"8ball", section:"Safety Play", rule:"A player may shoot a safety (defensive shot) and must announce it before shooting. Control passes to the opponent with no ball required to be pocketed."},
+    {game:"8ball", section:"Scratch on 8-Ball", rule:"If you scratch while shooting the 8-ball, you lose the game. The 8-ball must be the last ball pocketed to win."},
+    {game:"9ball", section:"The Rack", rule:"Nine balls (1–9) are racked in a diamond. The 1-ball is on the foot spot; the 9-ball is in the center. Other balls are placed randomly."},
+    {game:"9ball", section:"Ball-In-Hand", rule:"After any foul the incoming player gets cue ball in hand anywhere on the table. They may place it anywhere before shooting."},
+    {game:"9ball", section:"The Push Out", rule:"After the break, the player at the table may push out once. They shoot without normal rules applying. The opponent may accept or pass the shot back."},
+    {game:"9ball", section:"Legal Contact", rule:"The cue ball must contact the lowest numbered ball on the table first on every shot. Failing to do so is a foul."},
+    {game:"9ball", section:"Winning", rule:"Legally pocket the 9-ball at any time to win. The 9-ball may be pocketed on a combination as long as the lowest ball is hit first."},
+    {game:"9ball", section:"Three Fouls Rule", rule:"Three consecutive fouls in a rack results in a loss. The opponent must announce 'two fouls' after the second consecutive foul."},
+    {game:"snooker", section:"The Reds", rule:"15 red balls worth 1 point each must be potted alternately with coloured balls. A player must always pot a red first when reds remain on the table."},
+    {game:"snooker", section:"Colours Order", rule:"After all reds are potted, the colours must be potted in order: Yellow (2), Green (3), Brown (4), Blue (5), Pink (6), Black (7)."},
+    {game:"snooker", section:"Snookered", rule:"A player is snookered when they cannot hit both extreme edges of any legal ball. They may nominate a free ball if snookered after a foul."},
+    {game:"snooker", section:"The Miss Rule", rule:"If a player fails to make a genuine attempt to hit the ball on, a miss is called. The opponent can request the balls be replaced and the shot replayed."},
+    {game:"snooker", section:"Foul Values", rule:"The minimum foul value is 4 points. Fouls on pink or black award 6 or 7 points. The highest value ball involved in a foul is always awarded."},
+    {game:"snooker", section:"Maximum Break", rule:"A maximum break (147) requires potting all 15 reds each followed by the black, then all colours in order. This is the highest possible single break."}
+];
+
+let activeRulesGame = 'all';
+
+function renderRules(){
+    const list=document.getElementById('rules-list'); if(!list) return;
+    const term=(document.getElementById('rules-search')||{value:''}).value.toLowerCase();
+    const f=RULES_DATA.filter(r=>{
+        const mg=activeRulesGame==='all'||r.game===activeRulesGame;
+        const ms=!term||r.section.toLowerCase().includes(term)||r.rule.toLowerCase().includes(term);
+        return mg&&ms;
+    });
+    const countEl=document.getElementById('rules-count'); if(countEl) countEl.textContent=f.length+' rules';
+    const gc={'8ball':'var(--gold)','9ball':'var(--green2)','snooker':'var(--red2)'};
+    const gl={'8ball':'8-Ball','9ball':'9-Ball','snooker':'Snooker'};
+    list.innerHTML=f.map(r=>'<div class="card" style="padding:14px;background:rgba(255,255,255,0.02);">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
+        +'<span style="font-family:\'DM Mono\';font-size:9px;padding:2px 8px;border-radius:10px;color:'+gc[r.game]+';background:'+gc[r.game]+'22;border:1px solid '+gc[r.game]+'44;letter-spacing:1px;text-transform:uppercase;">'+gl[r.game]+'</span>'
+        +'<span style="font-family:\'Playfair Display\';font-size:14px;color:var(--ivory);">'+r.section+'</span>'
+        +'</div>'
+        +'<p style="font-size:12px;line-height:1.7;color:var(--chalk);">'+r.rule+'</p>'
+        +'</div>').join('')
+        ||'<div class="card" style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:30px;">No rules match your search.</div>';
+}
+
+function setRulesGame(game,el){
+    document.querySelectorAll('#rules-filters .pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active'); activeRulesGame=game; renderRules();
+}
+function filterRules(){ renderRules(); }
+
+// ════════════════════════════════════════════════════════
+// MORE DRAWER
+// ════════════════════════════════════════════════════════
+const DRAWER_SCREENS=['academy','bracket','timer','rules'];
+function toggleMoreDrawer(){ const d=document.getElementById('more-drawer'); d.classList.contains('open')?closeMoreDrawer():openMoreDrawer(); }
+function openMoreDrawer(){ document.getElementById('more-drawer').classList.add('open'); document.getElementById('more-backdrop').classList.add('open'); document.getElementById('bn-more').classList.add('active'); }
+function closeMoreDrawer(){
+    document.getElementById('more-drawer').classList.remove('open'); document.getElementById('more-backdrop').classList.remove('open');
+    const a=document.querySelector('.screen.active'); const cid=a?a.id.replace('screen-',''):'';
+    if(!DRAWER_SCREENS.includes(cid)) document.getElementById('bn-more').classList.remove('active');
+}
+function drawerNav(id){ closeMoreDrawer(); setTimeout(()=>{ showScreen(id); document.getElementById('bn-more').classList.add('active'); document.querySelectorAll('.bn-item:not(#bn-more)').forEach(b=>b.classList.remove('active')); },120); }
+
+// ════════════════════════════════════════════════════════
+// MINI PLAYER v9.2 — Continuous YouTube Stream Engine
+// ════════════════════════════════════════════════════════
+var MP_CHANNELS = {
+    live: [
+        {id:"UC-YHhXeWjF80OkVxR-HE2Xw", title:"Matchroom Pool — LIVE", meta:"Matchroom Pool Official", dur:"LIVE"},
+        {id:"UCgIzDzhEopPl7-LvpdxYr-g", title:"WPA World Pool — LIVE", meta:"World Pool Association", dur:"LIVE"},
+        {id:"UCDxrfuKTf6U0Vtd1fJTjkjA", title:"Accu-Stats Pro Pool — LIVE", meta:"Accu-Stats Video Productions", dur:"LIVE"},
+        {id:"UCtBRGZemSuj6k30FMQf4nJw", title:"CueSports International — LIVE", meta:"CSI Pool Events", dur:"LIVE"}
+    ],
+    shots: [
+        {id:"R4ESuBFuTjc", title:"Top 50 Insane Pool Shots Compiled", meta:"Dr. Dave Billiards - 18M views", dur:"14:32"},
+        {id:"bXhMTKAD9hE", title:"Efren Reyes - The Magician Best Shots", meta:"Pool Legends - 12M views", dur:"18:44"},
+        {id:"1JXvvhe6gGo", title:"Shane Van Boening Positional Masterclass", meta:"AZBilliards - 8M views", dur:"22:10"},
+        {id:"cPGFBt7nLBg", title:"Impossible Banks and Kick Combos", meta:"Trick Shot King - 6M views", dur:"11:05"},
+        {id:"Lq3t5_pFAT8", title:"Fedor Gorst Top 100 Shots 2023", meta:"Euro Tour Pool - 5M views", dur:"28:18"},
+        {id:"Mf5sSLxjkDY", title:"One Pocket - Safety and Offense", meta:"One Pocket Hall - 4M views", dur:"19:55"}
+    ],
+    events: [
+        {id:"7lbpQLzX5-o", title:"Mosconi Cup 2023 Full Highlights", meta:"Matchroom Pool - 9M views", dur:"45:22"},
+        {id:"9bLMFPIZCQ4", title:"WPA World 10-Ball 2024 Final", meta:"WPA World Pool - 7M views", dur:"52:10"},
+        {id:"VtYxPpOGXJE", title:"Derby City Classic One Pocket", meta:"DCC Official - 5M views", dur:"1:12:04"},
+        {id:"0GqBSNqFnZs", title:"US Open 9-Ball Semifinal Highlights", meta:"Accu-Stats Pool - 4M views", dur:"38:47"},
+        {id:"AELZpK6YQPU", title:"China Open 8-Ball Final 2024", meta:"World Pool Series - 3M views", dur:"1:04:18"}
+    ],
+    lessons: [
+        {id:"RCVvjkFlEbU", title:"How to Apply English - Full Guide", meta:"Dr. Dave Billiards - 11M views", dur:"24:38"},
+        {id:"kCxKHl7OIIQ", title:"Stance Bridge and Stroke Fundamentals", meta:"Billiards University - 9M views",dur:"31:15"},
+        {id:"j9PgFR4XKQE", title:"Stop Shot Draw and Follow Mastery", meta:"Pool School Online - 7M views", dur:"18:52"},
+        {id:"VJYRDd_DLZY", title:"Advanced Cue Ball Control System", meta:"ProPoolAcademy - 6M views", dur:"42:20"},
+        {id:"U9QizNo1ixI", title:"The Perfect Break Power and Accuracy", meta:"Billiards Today - 5M views", dur:"16:44"},
+        {id:"cSFz_pAZjKc", title:"8-Ball Strategy Three Shots Ahead", meta:"Pool Genius - 4M views", dur:"27:09"}
+    ]
+};
+
+var MP_LABELS = {live:"LIVE: PRO TOUR", shots:"MASTER SHOTS", events:"TOURNAMENTS", lessons:"ACADEMY STREAM"};
+var mpCurrentChannel = 'live';
+var mpCurrentIdx = 0;
+var mpOpen = false;
+var mpExpanded = false;
+var mpPlaylistOpen = false;
+var mpUserUnmuted = false;
+
+function mpOriginStr() {
+    return (window.location.protocol === 'file:')
+        ? 'https://www.youtube.com'
+        : (window.location.origin || 'https://localhost');
+}
+
+function mpLoadTrack(channel, idx, autoplay) {
+    mpCurrentChannel = channel;
+    var pl = MP_CHANNELS[channel];
+    if (!pl || !pl.length) return;
+    mpCurrentIdx = ((idx % pl.length) + pl.length) % pl.length;
+    var track = pl[mpCurrentIdx];
+    var ap = (autoplay === false) ? 0 : 1;
+    var src;
+    if (channel === 'live') {
+        src = 'https://www.youtube.com/embed/live_stream?channel=' + track.id + '&autoplay=' + ap;
+    } else {
+        src = 'https://www.youtube.com/embed/' + track.id + '?autoplay=' + ap;
+    }
+    src += '&mute=1&rel=0&modestbranding=1&enablejsapi=1&playsinline=1'
+        + '&origin=' + encodeURIComponent(mpOriginStr());
+    document.getElementById('mp-iframe').src = src;
+    document.getElementById('mp-now-title').textContent = track.title;
+    document.getElementById('mp-now-sub').textContent = track.meta;
+    document.getElementById('mp-channel-label').textContent = MP_LABELS[channel] || channel.toUpperCase();
+    var dot = document.getElementById('mp-live-dot');
+    if (dot) {
+        dot.style.background = channel === 'live' ? '#ff4747' : 'var(--gold)';
+        dot.style.boxShadow = channel === 'live' ? '0 0 6px #ff4747' : '0 0 6px var(--gold)';
+        dot.style.animation = channel === 'live' ? 'pulse-red 1.5s infinite' : 'none';
+    }
+    var nudge = document.getElementById('mp-mute-nudge');
+    if (nudge) nudge.style.display = (ap && !mpUserUnmuted) ? 'block' : 'none';
+    mpRenderPlaylist();
+}
+
+function mpUnmute() {
+    mpUserUnmuted = true;
+    var nudge = document.getElementById('mp-mute-nudge');
+    if (nudge) nudge.style.display = 'none';
+    var track = MP_CHANNELS[mpCurrentChannel][mpCurrentIdx];
+    var src;
+    if (mpCurrentChannel === 'live') {
+        src = 'https://www.youtube.com/embed/live_stream?channel=' + track.id + '&autoplay=1';
+    } else {
+        src = 'https://www.youtube.com/embed/' + track.id + '?autoplay=1';
+    }
+    src += '&rel=0&modestbranding=1&enablejsapi=1&playsinline=1'
+        + '&origin=' + encodeURIComponent(mpOriginStr());
+    document.getElementById('mp-iframe').src = src;
+}
+
+function mpNext() { mpLoadTrack(mpCurrentChannel, mpCurrentIdx + 1, true); }
+function mpPrev() { mpLoadTrack(mpCurrentChannel, mpCurrentIdx - 1, true); }
+
+function mpSwitchChannel(ch, el) {
+    document.querySelectorAll('.mp-tab').forEach(function(t){ t.classList.remove('active'); });
+    el.classList.add('active');
+    mpLoadTrack(ch, 0, true);
+}
+
+function toggleMiniPlayer() {
+    mpOpen = !mpOpen;
+    var mp = document.getElementById('mini-player');
+    mp.style.display = mpOpen ? 'block' : 'none';
+    if (mpOpen) {
+        var iframe = document.getElementById('mp-iframe');
+        if (!iframe.src || !iframe.src.includes('youtube')) {
+            mpLoadTrack('live', 0, true);
+        }
+    }
+}
+
+function toggleMpExpand() {
+    mpExpanded = !mpExpanded;
+    document.getElementById('mini-player').classList.toggle('expanded', mpExpanded);
+    var btn = document.getElementById('mp-btn-exp');
+    if (btn) btn.innerHTML = mpExpanded ? '&#10063;' : '&#10064;';
+}
+
+function toggleMpPlaylist() {
+    mpPlaylistOpen = !mpPlaylistOpen;
+    var pl = document.getElementById('mp-playlist');
+    var btn = document.getElementById('mp-btn-list');
+    pl.classList.toggle('open', mpPlaylistOpen);
+    if (btn) btn.style.color = mpPlaylistOpen ? 'var(--gold2)' : '';
+}
+
+function mpRenderPlaylist() {
+    var pl = document.getElementById('mp-playlist');
+    if (!pl) return;
+    var tracks = MP_CHANNELS[mpCurrentChannel] || [];
+    var html = '';
+    for (var i = 0; i < tracks.length; i++) {
+        var t = tracks[i];
+        var active = i === mpCurrentIdx;
+        html += '<div class="mp-track' + (active ? ' active' : '') + '" onclick="mpLoadTrack(\'' + mpCurrentChannel + '\',' + i + ',true)">'
+            + '<span class="mp-track-num">' + (active ? '&#9654;' : (i+1)) + '</span>'
+            + '<div class="mp-track-info"><div class="mp-track-title">' + t.title + '</div>'
+            + '<div class="mp-track-meta">' + t.meta + '</div></div>'
+            + '<span class="mp-track-dur">' + t.dur + '</span></div>';
+    }
+    pl.innerHTML = html;
+}
+
+// Auto-advance on video end via YouTube postMessage
+window.addEventListener('message', function(e) {
+    try {
+        var data = (typeof e.data === 'string') ? JSON.parse(e.data) : e.data;
+        if (data && data.event === 'onStateChange' && data.info === 0) { mpNext(); }
+    } catch(err) {}
+});
+
+// ════════════════════════════════════════════════════════
+// GEOLOCATION
+// ════════════════════════════════════════════════════════
+window._lastCoordKey = '';
+window._geoWatchId = null;
+
+function mpGeoSuccess(pos, locEl, debug) {
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    var acc = Math.round(pos.coords.accuracy);
+    userProfile.lastLat = lat;
+    userProfile.lastLng = lng;
+    saveProfile();
+    recalcVenueDistances(lat, lng);
+    var coordKey = lat.toFixed(2) + ',' + lng.toFixed(2);
+    if (coordKey === window._lastCoordKey) return;
+    window._lastCoordKey = coordKey;
+    fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json')
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            var city = d.address.city || d.address.town || d.address.suburb || d.address.village || 'Your Area';
+            var state = d.address.state_code || d.address.state || '';
+            var label = city + (state ? ', ' + state : '') + ' - Live GPS';
+            if (locEl) { locEl.textContent = label; locEl.style.color = 'var(--green2)'; }
+            if (debug) { debug.style.background='rgba(30,140,50,0.85)'; debug.textContent='GPS Live: '+city+(state?', '+state:'')+' (+-'+acc+'m)'; }
+            var dot = document.getElementById('geo-dot');
+            if (dot) { dot.style.background='var(--green2)'; dot.style.boxShadow='0 0 6px var(--green2)'; dot.style.animation='none'; }
+        })
+        .catch(function(){ if(locEl) locEl.textContent='GPS Active (+-'+acc+'m)'; });
+}
+
+function mpGeoError(err, locEl, debug) {
+    var msgs = {
+        1:'Location blocked - tap the lock icon in your browser bar to allow',
+        2:'Position unavailable - check device GPS settings',
+        3:'GPS timed out - move to an open area and retry'
+    };
+    var msg = msgs[err.code] || 'Location unavailable';
+    if (locEl) { locEl.textContent = msg; locEl.style.color = 'var(--gold)'; }
+    if (debug) { debug.style.background='rgba(180,80,10,0.85)'; debug.textContent='Geo error: '+msg; }
+    var dot = document.getElementById('geo-dot');
+    if (dot) { dot.style.background='var(--red2)'; dot.style.animation='none'; }
+}
+
+// ════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════
+window.onload = function() {
+    updateProfileUI(); renderVenues(); renderLessons(); renderProducts(); renderRules(); loadCart();
+    const debug = document.getElementById('debug-console');
+    const locEl = document.getElementById('location-status');
+    var isSecure = window.location.protocol === 'https:'
+        || window.location.hostname === 'localhost'
+        || window.location.hostname === '127.0.0.1';
+    var geoBanner = document.getElementById('geo-banner');
+    if (!isSecure && geoBanner) geoBanner.style.display = 'block';
+    var geoDot = document.getElementById('geo-dot');
+    if (geoDot) { geoDot.style.background='var(--gold)'; geoDot.style.boxShadow='0 0 6px var(--gold)'; geoDot.style.animation='pulse-red 1.5s infinite'; }
+
+    if (navigator.geolocation) {
+        if (locEl) { locEl.textContent = 'Acquiring GPS signal...'; locEl.style.color = 'var(--gold2)'; }
+        navigator.geolocation.getCurrentPosition(
+            function(pos) { mpGeoSuccess(pos, locEl, debug); },
+            function(err) { mpGeoError(err, locEl, debug); },
+            { timeout:8000, maximumAge:60000, enableHighAccuracy:true }
+        );
+        if (!window._geoWatchId) {
+            window._geoWatchId = navigator.geolocation.watchPosition(
+                function(pos) { mpGeoSuccess(pos, locEl, debug); },
+                function() { /* silent on watch errors */ },
+                { timeout:15000, maximumAge:30000, enableHighAccuracy:true }
+            );
+        }
+    } else {
+        if (locEl) { locEl.textContent = 'GPS not supported - check browser settings'; locEl.style.color='var(--red2)'; }
+    }
+    if(debug){ debug.style.background="rgba(30,140,50,0.85)"; debug.textContent = "Billiards Buddy v9.2 — PWA Ready."; }
+};
+
+// ════════════════════════════════════════════════════════
+// SERVICE WORKER REGISTRATION
+// ════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('./sw.js')
+            .then(function(reg) { console.log('[BB] SW registered, scope:', reg.scope); })
+            .catch(function(e) { console.warn('[BB] SW registration failed:', e); });
+    });
+}
+</script>
+</body>
+</html>
