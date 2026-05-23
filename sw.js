@@ -5,7 +5,7 @@
 //           for YouTube, Nominatim, Google Maps, Google Fonts.
 // ============================================================
 
-const CACHE_NAME = 'bb-cache-v4';
+const CACHE_NAME = 'bb-cache-v5';
 
 const PRECACHE_URLS = [
   './',
@@ -30,7 +30,12 @@ const NETWORK_ONLY_HOSTS = [
   'fonts.gstatic.com',
   'tile.openstreetmap.org',
   'overpass-api.de',
-  'nominatim.openstreetmap.org'
+  'nominatim.openstreetmap.org',
+  'www.gstatic.com',
+  'firebaseio.com',
+  'firebase.googleapis.com',
+  'identitytoolkit.googleapis.com',
+  'securetoken.googleapis.com'
 ];
 
 // ── install ──────────────────────────────────────────────────
