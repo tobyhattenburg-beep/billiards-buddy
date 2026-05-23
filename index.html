@@ -656,80 +656,80 @@ function updateVenueMapMarkers() {
 
 function fetchNearbyVenues(lat, lng) {
     var c = document.getElementById('venue-list');
-    if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">Searching for places with pool tables near you...</p>';
+    if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">&#128205; Finding pool tables near you...</p>';
     function hav(la1,lo1,la2,lo2){ var R=3958.8,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2); return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1); }
-    // Widest possible net: dedicated halls + any bar/pub/venue with pool-related tags
-    var R = 24140; // 15 miles in metres
-    var query = '[out:json][timeout:30];('
-        // Any venue tagged with billiards/pool/snooker sport
-        + 'node["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
-        + 'way["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
-        // Dedicated billiard halls
-        + 'node["leisure"="billiard_hall"](around:'+R+','+lat+','+lng+');'
-        + 'way["leisure"="billiard_hall"](around:'+R+','+lat+','+lng+');'
-        // Any venue with a pool_table tag (bars commonly use pool_table=yes/2/3)
-        + 'node["pool_table"](around:'+R+','+lat+','+lng+');'
-        + 'way["pool_table"](around:'+R+','+lat+','+lng+');'
-        // Billiards=yes tag
-        + 'node["billiards"="yes"](around:'+R+','+lat+','+lng+');'
-        + 'way["billiards"="yes"](around:'+R+','+lat+','+lng+');'
-        // Individual pool table nodes inside buildings
-        + 'node["leisure"="pool_table"](around:'+R+','+lat+','+lng+');'
-        // Bars/pubs explicitly tagged with billiards/pool sport (compound match)
-        + 'node["amenity"~"bar|pub|nightclub|club"]["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
-        + 'way["amenity"~"bar|pub|nightclub|club"]["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
-        // Bars/pubs with a pool_table tag
-        + 'node["amenity"~"bar|pub|nightclub|club"]["pool_table"](around:'+R+','+lat+','+lng+');'
-        + 'way["amenity"~"bar|pub|nightclub|club"]["pool_table"](around:'+R+','+lat+','+lng+');'
-        // Restaurants/bowling alleys with pool tags
-        + 'node["amenity"~"restaurant|bowling_alley"]["sport"~"billiards|pool"](around:'+R+','+lat+','+lng+');'
-        + 'way["amenity"~"restaurant|bowling_alley"]["sport"~"billiards|pool"](around:'+R+','+lat+','+lng+');'
-        + ');out center 40;';
 
-    // Determine category using OSM amenity/leisure tags first, then name
+    var R = 24140; // 15 miles in metres
+    var OV = 'https://overpass-api.de/api/interpreter';
+    var around = '(around:'+R+','+lat+','+lng+')';
+
+    // Query 1: tag-based — consolidated into fewer union clauses
+    var q1 = '[out:json][timeout:15];('
+        + 'node["sport"~"billiards|pool|snooker"]'+around+';'
+        + 'way["sport"~"billiards|pool|snooker"]'+around+';'
+        + 'node["leisure"~"billiard_hall|pool_table"]'+around+';'
+        + 'way["leisure"="billiard_hall"]'+around+';'
+        + 'node["pool_table"]'+around+';'
+        + 'way["pool_table"]'+around+';'
+        + 'node["billiards"="yes"]'+around+';'
+        + 'way["billiards"="yes"]'+around+';'
+        + ');out center 30;';
+
+    // Query 2: name-based — catches any place that says "billiard/pool hall/snooker" in its name
+    var q2 = '[out:json][timeout:15];('
+        + 'node["name"~"billiard|pool hall|pool room|pool table|snooker|cue club|cue lounge",i]'+around+';'
+        + 'way["name"~"billiard|pool hall|pool room|pool table|snooker|cue club|cue lounge",i]'+around+';'
+        + 'node["amenity"~"bar|pub|nightclub"]["sport"~"billiards|pool|snooker"]'+around+';'
+        + 'way["amenity"~"bar|pub|nightclub"]["sport"~"billiards|pool|snooker"]'+around+';'
+        + 'node["amenity"~"bar|pub|nightclub"]["pool_table"]'+around+';'
+        + 'way["amenity"~"bar|pub|nightclub"]["pool_table"]'+around+';'
+        + ');out center 30;';
+
+    function post(q){ return fetch(OV,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)}).then(function(r){return r.json();}); }
+
     function categorize(tags, name) {
         if (tags.leisure === 'billiard_hall') return 'pro';
-        var barAmenities = { bar:1, pub:1, nightclub:1, biergarten:1, restaurant:1, cafe:1, fast_food:1, food_court:1 };
-        if (barAmenities[tags.amenity]) return 'bar';
+        var barAm = {bar:1,pub:1,nightclub:1,biergarten:1,restaurant:1,cafe:1,bowling_alley:1};
+        if (barAm[tags.amenity]) return 'bar';
         var lname = name.toLowerCase();
-        var barWords = ['bar','tavern','lounge','pub','brewery','taproom','saloon','inn','grill','cantina'];
-        if (barWords.some(function(w){ return lname.indexOf(w) !== -1; })) return 'bar';
+        var barW = ['bar','tavern','lounge','pub','brewery','taproom','saloon','inn','grill','cantina','sports bar'];
+        if (barW.some(function(w){ return lname.indexOf(w)!==-1; })) return 'bar';
         return 'pro';
     }
-    // Human-readable venue type label
-    function venueLabel(tags) {
+    function venueLabel(tags, name) {
         if (tags.leisure === 'billiard_hall') return 'Billiard Hall';
-        var labelMap = { bar:'Bar & Pool', pub:'Pub & Pool', nightclub:'Club & Pool', restaurant:'Restaurant', cafe:'Cafe', biergarten:'Beer Garden', bowling_alley:'Bowling & Pool' };
-        if (labelMap[tags.amenity]) return labelMap[tags.amenity];
-        if (tags.sport === 'billiards' || tags.amenity === 'billiards') return 'Billiard Hall';
+        var lm = {bar:'Bar & Pool',pub:'Pub & Pool',nightclub:'Club & Pool',restaurant:'Restaurant',cafe:'Cafe',biergarten:'Beer Garden',bowling_alley:'Bowling & Pool'};
+        if (lm[tags.amenity]) return lm[tags.amenity];
+        var lname = (name||'').toLowerCase();
+        if (lname.indexOf('snooker')!==-1) return 'Snooker Hall';
+        if (lname.indexOf('billiard')!==-1) return 'Billiard Hall';
         return 'Pool Tables';
     }
-
-    fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'data=' + encodeURIComponent(query)
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-        var seen = {}, results = [];
-        (data.elements||[]).forEach(function(el){
-            var tags = el.tags || {};
+    function parseElements(elements, seen, results) {
+        (elements||[]).forEach(function(el){
+            var tags = el.tags||{};
             var name = tags.name;
             if (!name || seen[name]) return;
             seen[name] = true;
             var vLat = el.type==='way' ? el.center.lat : el.lat;
             var vLng = el.type==='way' ? el.center.lon : el.lon;
+            if (!vLat || !vLng) return;
             var dist = hav(lat, lng, vLat, vLng);
-            var type = categorize(tags, name);
-            var label = venueLabel(tags);
-            var feats = [label];
+            var feats = [venueLabel(tags, name)];
             if (tags['addr:street']) feats.push(tags['addr:street']);
             if (tags['addr:city']) feats.push(tags['addr:city']);
-            results.push({ id:el.id, name:name, type:type, rating:null, tables:null, lat:vLat, lng:vLng, dist:dist+' mi', features:feats });
+            results.push({id:el.id, name:name, type:categorize(tags,name), rating:null, tables:null, lat:vLat, lng:vLng, dist:dist+' mi', features:feats});
         });
+    }
+
+    // Run both queries in parallel for speed
+    Promise.all([post(q1).catch(function(){return {elements:[]};}), post(q2).catch(function(){return {elements:[]};}) ])
+    .then(function(responses){
+        var seen = {}, results = [];
+        parseElements(responses[0].elements, seen, results);
+        parseElements(responses[1].elements, seen, results);
         results.sort(function(a,b){ return parseFloat(a.dist)-parseFloat(b.dist); });
-        VENUES = results.slice(0,4);
+        VENUES = results.slice(0,8);
         if (VENUES.length === 0) {
             if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">No pool tables found within 15 miles.</p>';
         } else {
