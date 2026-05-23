@@ -2,13 +2,25 @@
   "name": "Billiards Buddy",
   "short_name": "BB Buddy",
   "description": "Executive-lounge billiards companion — offline ready.",
-  "start_url": "./billiards-buddy-v9.2-pwa.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#061a0b",
   "theme_color": "#d4a017",
   "orientation": "portrait-primary",
   "scope": "./",
   "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "./icon-192.svg",
       "sizes": "192x192",

@@ -5,11 +5,14 @@
 //           for YouTube, Nominatim, Google Maps, Google Fonts.
 // ============================================================
 
-const CACHE_NAME = 'bb-cache-v2';
+const CACHE_NAME = 'bb-cache-v3';
 
 const PRECACHE_URLS = [
-  './billiards-buddy-v9.2-pwa.html',
+  './',
+  './index.html',
   './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   './icon-192.svg',
   './icon-512.svg'
 ];

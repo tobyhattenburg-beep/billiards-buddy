@@ -4,7 +4,7 @@
 
 $port = 8080
 $root = $PSScriptRoot   # folder containing this script
-$url  = "http://localhost:$port/billiards-buddy-v9.2-pwa.html"
+$url  = "http://localhost:$port/"
 
 $mimeMap = @{
     '.html' = 'text/html; charset=utf-8'
@@ -53,7 +53,7 @@ while ($listener.IsListening) {
         $res  = $ctx.Response
 
         $relPath = $req.Url.LocalPath.TrimStart('/')
-        if ($relPath -eq '') { $relPath = 'billiards-buddy-v9.2-pwa.html' }
+        if ($relPath -eq '') { $relPath = 'index.html' }
         $filePath = Join-Path $root $relPath
 
         if (Test-Path $filePath -PathType Leaf) {
