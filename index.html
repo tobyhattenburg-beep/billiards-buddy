@@ -514,10 +514,11 @@ function renderVenues(filter){
             +(nearest?'<div style="font-family:\'DM Mono\';font-size:9px;letter-spacing:2px;color:var(--green2);margin-bottom:8px;">&#128205; NEAREST TO YOU</div>':'')
             + '<div style="display:flex;justify-content:space-between;align-items:center;">'
             + '<h4 style="font-family:\'Playfair Display\';color:var(--ivory);flex:1;">' + v.name + '</h4>'
-            + '<div style="display:flex;align-items:center;gap:8px;">'
+            + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
             + '<button onclick="toggleFaveVenue(' + v.id + ')" style="background:none;border:none;cursor:pointer;font-size:20px;padding:0;line-height:1;">' + (isFav ? '&#10084;&#65039;' : '&#9825;') + '</button>'
             + '<button onclick="openVenueMap(\'' + v.name.replace(/'/g,"\\'") + '\',' + (v.lat||0) + ',' + (v.lng||0) + ')" style="background:rgba(212,160,23,0.15);border:1px solid var(--borderg);border-radius:6px;cursor:pointer;font-family:\'DM Mono\';font-size:10px;padding:4px 8px;color:var(--gold);">&#128205; Maps</button>'
-            + '<span style="color:'+(nearest?'var(--green2)':'var(--gold)')+';font-family:\'DM Mono\';font-size:12px;">' + v.dist + '</span>'
+            + '<button onclick="getDirections(' + (v.lat||0) + ',' + (v.lng||0) + ',\'' + v.name.replace(/'/g,"\\'") + '\')" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);border-radius:6px;cursor:pointer;font-family:\'DM Mono\';font-size:10px;padding:4px 8px;color:var(--green2);">&#9193; Directions</button>'
+            + '<span style="color:'+(nearest?'var(--green2)':'var(--gold)')+';font-family:\'DM Mono\';font-size:12px;margin-left:auto;">' + v.dist + '</span>'
             + '</div></div>'
             + '<p style="font-size:11px;color:var(--dim);margin:5px 0;">' + (v.features&&v.features.length?v.features.join(' • '):'Pool Hall') + '</p>'
             + '<div style="font-size:11px;color:var(--gold2);">' + (v.rating?'★ '+v.rating+' — ':'') + (v.tables?v.tables+' Tables':'Pool Hall') + (isFav?' <span style="color:#e74c3c;">❤ Saved</span>':'') + '</div>'
@@ -542,6 +543,13 @@ function openVenueMap(name, lat, lng) {
     var url = (lat && lng)
         ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(name) + '&center=' + lat + ',' + lng
         : 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(name + ' pool table');
+    window.open(url, '_blank');
+}
+
+function getDirections(lat, lng, name) {
+    var url = (lat && lng)
+        ? 'https://www.google.com/maps/dir/?api=1&destination=' + lat + ',' + lng
+        : 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(name);
     window.open(url, '_blank');
 }
 
@@ -587,24 +595,33 @@ function fetchNearbyVenues(lat, lng) {
     var c = document.getElementById('venue-list');
     if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">Searching for places with pool tables near you...</p>';
     function hav(la1,lo1,la2,lo2){ var R=3958.8,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2); return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1); }
-    // Cast the widest possible net — dedicated halls + any bar/venue tagged with pool tables
+    // Widest possible net: dedicated halls + any bar/pub/venue with pool-related tags
     var R = 24140; // 15 miles in metres
     var query = '[out:json][timeout:30];('
-        + 'node["sport"="billiards"](around:'+R+','+lat+','+lng+');'
-        + 'node["sport"="pool"](around:'+R+','+lat+','+lng+');'
-        + 'node["sport"="snooker"](around:'+R+','+lat+','+lng+');'
+        // Any venue tagged with billiards/pool/snooker sport
+        + 'node["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
+        + 'way["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
+        // Dedicated billiard halls
         + 'node["leisure"="billiard_hall"](around:'+R+','+lat+','+lng+');'
-        + 'node["amenity"="billiards"](around:'+R+','+lat+','+lng+');'
-        + 'node["pool_table"](around:'+R+','+lat+','+lng+');'
-        + 'node["billiards"="yes"](around:'+R+','+lat+','+lng+');'
-        + 'node["leisure"="pool_table"](around:'+R+','+lat+','+lng+');'
-        + 'way["sport"="billiards"](around:'+R+','+lat+','+lng+');'
-        + 'way["sport"="pool"](around:'+R+','+lat+','+lng+');'
-        + 'way["sport"="snooker"](around:'+R+','+lat+','+lng+');'
         + 'way["leisure"="billiard_hall"](around:'+R+','+lat+','+lng+');'
+        // Any venue with a pool_table tag (bars commonly use pool_table=yes/2/3)
+        + 'node["pool_table"](around:'+R+','+lat+','+lng+');'
         + 'way["pool_table"](around:'+R+','+lat+','+lng+');'
+        // Billiards=yes tag
+        + 'node["billiards"="yes"](around:'+R+','+lat+','+lng+');'
         + 'way["billiards"="yes"](around:'+R+','+lat+','+lng+');'
-        + ');out center 30;';
+        // Individual pool table nodes inside buildings
+        + 'node["leisure"="pool_table"](around:'+R+','+lat+','+lng+');'
+        // Bars/pubs explicitly tagged with billiards/pool sport (compound match)
+        + 'node["amenity"~"bar|pub|nightclub|club"]["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
+        + 'way["amenity"~"bar|pub|nightclub|club"]["sport"~"billiards|pool|snooker"](around:'+R+','+lat+','+lng+');'
+        // Bars/pubs with a pool_table tag
+        + 'node["amenity"~"bar|pub|nightclub|club"]["pool_table"](around:'+R+','+lat+','+lng+');'
+        + 'way["amenity"~"bar|pub|nightclub|club"]["pool_table"](around:'+R+','+lat+','+lng+');'
+        // Restaurants/bowling alleys with pool tags
+        + 'node["amenity"~"restaurant|bowling_alley"]["sport"~"billiards|pool"](around:'+R+','+lat+','+lng+');'
+        + 'way["amenity"~"restaurant|bowling_alley"]["sport"~"billiards|pool"](around:'+R+','+lat+','+lng+');'
+        + ');out center 40;';
 
     // Determine category using OSM amenity/leisure tags first, then name
     function categorize(tags, name) {
