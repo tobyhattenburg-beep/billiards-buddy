@@ -502,17 +502,20 @@ function renderVenues(filter){
     if(filter===undefined) filter='all';
     const c = document.getElementById('venue-list'); if(!c) return;
     const favs = userProfile.favoriteVenues || [];
-    const f = filter==='all' ? VENUES : VENUES.filter(v=>v.type===filter);
+    let f = filter==='all' ? VENUES.slice() : VENUES.filter(v=>v.type===filter);
+    if(window._gpsReady) f.sort((a,b)=>(parseFloat(a.dist)||999)-(parseFloat(b.dist)||999));
     let html = '';
-    f.forEach(v => {
+    f.forEach((v,idx) => {
         const isFav = favs.includes(v.id);
-        html += '<div class="card" style="padding:15px;margin-bottom:10px;background:rgba(255,255,255,0.03);">'
+        const nearest = window._gpsReady && idx===0;
+        html += '<div class="card" style="padding:15px;margin-bottom:10px;background:rgba(255,255,255,0.03);'+(nearest?'border-color:rgba(39,174,96,0.6);':'')+'">'
+            +(nearest?'<div style="font-family:\'DM Mono\';font-size:9px;letter-spacing:2px;color:var(--green2);margin-bottom:8px;">&#128205; NEAREST TO YOU</div>':'')
             + '<div style="display:flex;justify-content:space-between;align-items:center;">'
             + '<h4 style="font-family:\'Playfair Display\';color:var(--ivory);flex:1;">' + v.name + '</h4>'
             + '<div style="display:flex;align-items:center;gap:8px;">'
             + '<button onclick="toggleFaveVenue(' + v.id + ')" style="background:none;border:none;cursor:pointer;font-size:20px;padding:0;line-height:1;">' + (isFav ? '&#10084;&#65039;' : '&#9825;') + '</button>'
             + '<button onclick="openVenueMap(\'' + v.name.replace(/'/g,"\\'") + '\')" style="background:rgba(212,160,23,0.15);border:1px solid var(--borderg);border-radius:6px;cursor:pointer;font-family:\'DM Mono\';font-size:10px;padding:4px 8px;color:var(--gold);">&#128205; Map</button>'
-            + '<span style="color:var(--gold);font-family:\'DM Mono\';font-size:12px;">' + v.dist + '</span>'
+            + '<span style="color:'+(nearest?'var(--green2)':'var(--gold)')+';font-family:\'DM Mono\';font-size:12px;">' + v.dist + '</span>'
             + '</div></div>'
             + '<p style="font-size:11px;color:var(--dim);margin:5px 0;">' + v.features.join(' • ') + '</p>'
             + '<div style="font-size:11px;color:var(--gold2);">★ ' + v.rating + ' — ' + v.tables + ' Tables' + (isFav?' <span style="color:#e74c3c;">❤ Saved</span>':'') + '</div>'
@@ -543,6 +546,9 @@ function recalcVenueDistances(lat, lng) {
     renderVenues();
     const mapDiv = document.getElementById('venues-map');
     if(mapDiv){
+        var mapKey = lat.toFixed(3) + ',' + lng.toFixed(3);
+        if(mapDiv.dataset.lastCoord === mapKey) return; // skip rebuild — prevents flash
+        mapDiv.dataset.lastCoord = mapKey;
         mapDiv.style.display='block';
         mapDiv.innerHTML='<iframe src="https://www.openstreetmap.org/export/embed.html?bbox='+(lng-0.05)+','+(lat-0.05)+','+(lng+0.05)+','+(lat+0.05)+'&layer=mapnik&marker='+lat+','+lng+'" style="width:100%;height:100%;border:none;" loading="lazy" title="Your location map"></iframe>';
     }
@@ -924,27 +930,32 @@ window.addEventListener('message', function(e) {
 // ════════════════════════════════════════════════════════
 window._lastCoordKey = '';
 window._geoWatchId = null;
+window._gpsReady = false;
 
 function mpGeoSuccess(pos, locEl) {
     var lat = pos.coords.latitude;
     var lng = pos.coords.longitude;
     var acc = Math.round(pos.coords.accuracy);
+    // Dedup at ~1 km granularity BEFORE doing any DOM work
+    var coordKey = lat.toFixed(2) + ',' + lng.toFixed(2);
+    if (coordKey === window._lastCoordKey) {
+        if (locEl) { locEl.textContent = 'GPS Active (±' + acc + 'm)'; locEl.style.color = 'var(--green2)'; }
+        return;
+    }
+    window._lastCoordKey = coordKey;
+    window._gpsReady = true;
     userProfile.lastLat = lat;
     userProfile.lastLng = lng;
     saveProfile();
     recalcVenueDistances(lat, lng);
-    var coordKey = lat.toFixed(2) + ',' + lng.toFixed(2);
-    if (coordKey === window._lastCoordKey) return;
-    window._lastCoordKey = coordKey;
     fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json')
         .then(function(r){ return r.json(); })
         .then(function(d){
             var city = d.address.city || d.address.town || d.address.suburb || d.address.village || 'Your Area';
             var state = d.address.state_code || d.address.state || '';
-            var label = city + (state ? ', ' + state : '') + ' - Live GPS';
-            if (locEl) { locEl.textContent = label; locEl.style.color = 'var(--green2)'; }
+            if (locEl) { locEl.textContent = city + (state ? ', ' + state : '') + ' — Live GPS'; locEl.style.color = 'var(--green2)'; }
         })
-        .catch(function(){ if(locEl) locEl.textContent='GPS Active (+-'+acc+'m)'; });
+        .catch(function(){ if(locEl) locEl.textContent = 'GPS Active (±' + acc + 'm)'; locEl.style.color = 'var(--green2)'; });
 }
 
 function mpGeoError(err, locEl) {
