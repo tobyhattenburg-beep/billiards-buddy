@@ -552,10 +552,12 @@ function recalcVenueDistances(lat, lng) {
 // ACADEMY
 // ════════════════════════════════════════════════════════
 const LESSON_DATA = [
-    {id:1, ytId:"kCxKHl7OIIQ", title:"Proper Structural Stance", level:"Beginner", duration:"4:20"},
-    {id:2, ytId:"RCVvjkFlEbU", title:"Ghost Ball Deviation Targeting", level:"Beginner", duration:"6:15"},
-    {id:3, ytId:"j9PgFR4XKQE", title:"Low-Axis Draw Shot Spins", level:"Intermediate", duration:"8:45"},
-    {id:4, ytId:"VJYRDd_DLZY", title:"Three-Rail Breakout Paths", level:"Advanced", duration:"12:30"}
+    {id:1, ytId:"glmwCJs6MIA", title:"Stance, Grip & Stroke Basics", level:"Beginner", duration:"12:04"},
+    {id:2, ytId:"YIsEqTna2Ao", title:"10 Years of Pool Knowledge", level:"Beginner", duration:"18:32"},
+    {id:3, ytId:"DpO3CCIibZQ", title:"When to Use Spin and Draw", level:"Intermediate", duration:"9:47"},
+    {id:4, ytId:"Dn1QzfOvk8I", title:"Power Draw Shot — Full Guide", level:"Intermediate", duration:"11:20"},
+    {id:5, ytId:"Ru3TLipXKvw", title:"Inside Spin Draw (Advanced)", level:"Advanced", duration:"14:55"},
+    {id:6, ytId:"f1vn9kbHXDo", title:"The Most Important Shot in Pool", level:"Advanced", duration:"16:08"}
 ];
 function filterLessons(level,el){ document.querySelectorAll('#screen-academy .pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); renderLessons(level); }
 function renderLessons(level){
@@ -772,27 +774,27 @@ var MP_CHANNELS = {
         {id:"UCtBRGZemSuj6k30FMQf4nJw", title:"CueSports International — LIVE", meta:"CSI Pool Events", dur:"LIVE"}
     ],
     shots: [
-        {id:"R4ESuBFuTjc", title:"Top 50 Insane Pool Shots Compiled", meta:"Dr. Dave Billiards - 18M views", dur:"14:32"},
-        {id:"bXhMTKAD9hE", title:"Efren Reyes - The Magician Best Shots", meta:"Pool Legends - 12M views", dur:"18:44"},
-        {id:"1JXvvhe6gGo", title:"Shane Van Boening Positional Masterclass", meta:"AZBilliards - 8M views", dur:"22:10"},
-        {id:"cPGFBt7nLBg", title:"Impossible Banks and Kick Combos", meta:"Trick Shot King - 6M views", dur:"11:05"},
-        {id:"Lq3t5_pFAT8", title:"Fedor Gorst Top 100 Shots 2023", meta:"Euro Tour Pool - 5M views", dur:"28:18"},
-        {id:"Mf5sSLxjkDY", title:"One Pocket - Safety and Offense", meta:"One Pocket Hall - 4M views", dur:"19:55"}
+        {id:"nVzsMt0sTto", title:"Top 30 Incredible Pool Shots 2024", meta:"Matchroom Pool", dur:"12:08"},
+        {id:"wy0XXosmxQc", title:"Top 30 Greatest Pool Shots of All Time", meta:"Matchroom Pool", dur:"14:55"},
+        {id:"KqqSIlKJkZ0", title:"EuroTour 2024 — Best 9-Ball Shots", meta:"Matchroom Pool", dur:"10:22"},
+        {id:"4U0vSAkvL1k", title:"200 Greatest Pro Pool Shots Ever", meta:"Dr. Dave Billiards", dur:"31:44"},
+        {id:"wdD4XEAemkA", title:"18 Best Kick & Bank Shots — 2024 WPC", meta:"Matchroom Pool", dur:"9:15"},
+        {id:"4fEcP_0KZRk", title:"Efren Reyes — Best 50 Shots", meta:"Pool Archive", dur:"18:30"}
     ],
     events: [
-        {id:"7lbpQLzX5-o", title:"Mosconi Cup 2023 Full Highlights", meta:"Matchroom Pool - 9M views", dur:"45:22"},
-        {id:"9bLMFPIZCQ4", title:"WPA World 10-Ball 2024 Final", meta:"WPA World Pool - 7M views", dur:"52:10"},
-        {id:"VtYxPpOGXJE", title:"Derby City Classic One Pocket", meta:"DCC Official - 5M views", dur:"1:12:04"},
-        {id:"0GqBSNqFnZs", title:"US Open 9-Ball Semifinal Highlights", meta:"Accu-Stats Pool - 4M views", dur:"38:47"},
-        {id:"AELZpK6YQPU", title:"China Open 8-Ball Final 2024", meta:"World Pool Series - 3M views", dur:"1:04:18"}
+        {id:"Rn-Zb3o2xkQ", title:"Ko Ping Chung vs Appleton — 2024 WPC", meta:"Matchroom Pool", dur:"41:18"},
+        {id:"ET_1O95dbNE", title:"2023 Mosconi Cup — Day 1 Highlights", meta:"Matchroom Pool", dur:"22:47"},
+        {id:"q_KmG15hlZI", title:"SVB vs Sanchez-Ruiz — 2024 Mosconi Cup", meta:"Matchroom Pool", dur:"18:33"},
+        {id:"SFht_KpzN9U", title:"Filler vs Van Boening — 2023 Mosconi Cup", meta:"Matchroom Pool", dur:"25:10"},
+        {id:"nB42wkVHskA", title:"Woodward vs Kaçi — 2024 Mosconi Cup", meta:"Matchroom Pool", dur:"19:55"}
     ],
     lessons: [
-        {id:"RCVvjkFlEbU", title:"How to Apply English - Full Guide", meta:"Dr. Dave Billiards - 11M views", dur:"24:38"},
-        {id:"kCxKHl7OIIQ", title:"Stance Bridge and Stroke Fundamentals", meta:"Billiards University - 9M views",dur:"31:15"},
-        {id:"j9PgFR4XKQE", title:"Stop Shot Draw and Follow Mastery", meta:"Pool School Online - 7M views", dur:"18:52"},
-        {id:"VJYRDd_DLZY", title:"Advanced Cue Ball Control System", meta:"ProPoolAcademy - 6M views", dur:"42:20"},
-        {id:"U9QizNo1ixI", title:"The Perfect Break Power and Accuracy", meta:"Billiards Today - 5M views", dur:"16:44"},
-        {id:"cSFz_pAZjKc", title:"8-Ball Strategy Three Shots Ahead", meta:"Pool Genius - 4M views", dur:"27:09"}
+        {id:"glmwCJs6MIA", title:"Pool Basics — Stance, Grip & Stroke", meta:"Zero-X Billiards", dur:"12:04"},
+        {id:"YIsEqTna2Ao", title:"10 Years of Pool Knowledge in One Video", meta:"Zero-X Billiards", dur:"18:32"},
+        {id:"4X6u_VeG5xY", title:"Beginner Primer — Stance and Bridge", meta:"Pool School", dur:"8:45"},
+        {id:"DpO3CCIibZQ", title:"When to Use Spin and Draw", meta:"Pool School", dur:"9:47"},
+        {id:"Ru3TLipXKvw", title:"Inside Spin Draw Shot (Advanced)", meta:"Pool Pro Tips", dur:"14:55"},
+        {id:"Dn1QzfOvk8I", title:"Power Draw Shot — Full Guide", meta:"Pool Lessons", dur:"11:20"}
     ]
 };
 
