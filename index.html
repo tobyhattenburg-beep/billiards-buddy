@@ -120,6 +120,9 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
 .cm-name{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold2);}
 .cm-time{font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);}
 .cm-text{font-family:'Libre Baskerville',serif;font-size:13px;color:var(--ivory);line-height:1.55;word-break:break-word;}
+.cm-report{background:none;border:none;color:var(--dim);font-size:11px;cursor:pointer;padding:2px 4px;border-radius:4px;opacity:0;transition:opacity 0.2s;line-height:1;margin-left:auto;}
+.cm-msg:hover .cm-report{opacity:0.6;}
+.cm-report:hover{opacity:1!important;color:var(--red2);}
 #community-input-bar{padding:10px 16px 80px;background:rgba(6,26,11,0.97);border-top:1px solid var(--borderg);flex-shrink:0;}
 #community-input{width:100%;background:rgba(0,0,0,0.35);border:1px solid var(--borderg);color:var(--ivory);padding:10px 13px;border-radius:8px;outline:none;font-family:'DM Mono',monospace;font-size:13px;margin-bottom:8px;}
 #community-input:focus{border-color:var(--gold2);}
@@ -722,12 +725,39 @@ function fetchNearbyVenues(lat, lng) {
         });
     }
 
-    // Run both queries in parallel for speed
-    Promise.all([post(q1).catch(function(){return {elements:[]};}), post(q2).catch(function(){return {elements:[]};}) ])
+    function fetchGooglePlaces() {
+        if (!GOOGLE_PLACES_KEY) return Promise.resolve([]);
+        var base = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
+        var params = '?location='+lat+','+lng+'&radius='+R+'&keyword=billiards+pool+hall+snooker&key='+GOOGLE_PLACES_KEY;
+        return fetch(base+params)
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+                return (d.results||[]).map(function(p){
+                    var vLat = p.geometry.location.lat;
+                    var vLng = p.geometry.location.lng;
+                    var dist = hav(lat,lng,vLat,vLng);
+                    return {id:'gp_'+p.place_id, name:p.name, type:'pro', rating:p.rating||null, tables:null,
+                            lat:vLat, lng:vLng, dist:dist+' mi',
+                            features:['Google Places', p.vicinity||''].filter(Boolean)};
+                });
+            })
+            .catch(function(){ return []; });
+    }
+
+    // Run all queries in parallel
+    Promise.all([
+        post(q1).catch(function(){return {elements:[]};}),
+        post(q2).catch(function(){return {elements:[]};}),
+        fetchGooglePlaces()
+    ])
     .then(function(responses){
         var seen = {}, results = [];
         parseElements(responses[0].elements, seen, results);
         parseElements(responses[1].elements, seen, results);
+        // Merge Google Places results
+        (responses[2]||[]).forEach(function(v){
+            if (!seen[v.name]) { seen[v.name]=true; results.push(v); }
+        });
         results.sort(function(a,b){ return parseFloat(a.dist)-parseFloat(b.dist); });
         VENUES = results.slice(0,8);
         if (VENUES.length === 0) {
@@ -880,8 +910,10 @@ function startClock(){
         const d=document.getElementById('clock-display');
         if(d) d.textContent=clockTime;
         if(d){ d.style.color=clockTime<=5?'var(--red2)':clockTime<=10?'var(--gold)':'var(--gold2)'; }
+        if(clockTime<=5&&clockTime>0) playClockTick();
         if(clockTime<=0){
             clearInterval(clockInterval); clockRunning=false;
+            playClockBeep();
             if(window.navigator.vibrate) window.navigator.vibrate([200,100,200]);
             document.getElementById('btn-start').textContent='Start';
             userProfile.stats.shotsTimed=(userProfile.stats.shotsTimed||0)+1;
@@ -895,6 +927,30 @@ function resetClock(){
     if(d){ d.textContent=clockMax; d.style.color='var(--gold2)'; }
     document.getElementById('btn-start').textContent='Start';
 }
+function playClockBeep(){
+    try{
+        var ctx=new(window.AudioContext||window.webkitAudioContext)();
+        [0,0.22,0.44].forEach(function(t){
+            var o=ctx.createOscillator(),g=ctx.createGain();
+            o.connect(g);g.connect(ctx.destination);
+            o.type='square';o.frequency.value=880;
+            g.gain.setValueAtTime(0.28,ctx.currentTime+t);
+            g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+0.18);
+            o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+0.2);
+        });
+    }catch(e){}
+}
+function playClockTick(){
+    try{
+        var ctx=new(window.AudioContext||window.webkitAudioContext)();
+        var o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=1200;
+        g.gain.setValueAtTime(0.1,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.06);
+        o.start(ctx.currentTime);o.stop(ctx.currentTime+0.07);
+    }catch(e){}
+}
 
 // ════════════════════════════════════════════════════════
 // MARKETPLACE — Affiliate Links
@@ -903,6 +959,7 @@ function resetClock(){
 // ════════════════════════════════════════════════════════
 const AMZN_TAG  = 'billiardsbuddy-20';
 const EBAY_CAMP = '5338940929';
+const GOOGLE_PLACES_KEY = ''; // Paste your Google Places API key here for richer venue results
 
 function amzn(q){ return 'https://www.amazon.com/s?k='+encodeURIComponent(q)+'&tag='+AMZN_TAG; }
 function ebay(q){ return 'https://rover.ebay.com/rover/1/711-53200-19255-0/1?toolid=10001&campid='+EBAY_CAMP+'&customid=&mpre='+encodeURIComponent('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(q)); }
@@ -1291,7 +1348,7 @@ function listenRoom(room) {
     _communityRef = _fbDb.ref('community/' + room).limitToLast(60);
     _communityRef.on('value', function(snap) {
         var msgs = [];
-        snap.forEach(function(c){ msgs.push(c.val()); });
+        snap.forEach(function(c){ var v=c.val(); v._key=c.key; msgs.push(v); });
         renderCommunityMessages(msgs);
     }, function(){ showToast('Could not load messages. Check connection.', 'gold'); });
 }
@@ -1308,10 +1365,12 @@ function renderCommunityMessages(msgs) {
         var initials = ((msg.user||'?')[0]).toUpperCase();
         var aColor = avatarColors[Math.abs(hashStr(msg.user||'')) % avatarColors.length];
         var time = new Date(msg.ts||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        var key = escCom(msg._key||'');
         return '<div class="cm-msg">'
             + '<div class="cm-avatar" style="background:'+aColor+';">'+initials+'</div>'
             + '<div class="cm-body">'
-            + '<div class="cm-meta"><span class="cm-name">'+(msg.user||'Anonymous')+'</span><span class="cm-time">'+time+'</span></div>'
+            + '<div class="cm-meta"><span class="cm-name">'+(msg.user||'Anonymous')+'</span><span class="cm-time">'+time+'</span>'
+            + '<button class="cm-report" onclick="reportMessage(\''+key+'\',\''+_communityRoom+'\')" title="Report message">&#128681;</button></div>'
             + '<div class="cm-text">'+escCom(msg.text||'')+'</div>'
             + '</div></div>';
     }).join('');
@@ -1321,11 +1380,22 @@ function renderCommunityMessages(msgs) {
 function hashStr(s){ var h=0; for(var i=0;i<s.length;i++){ h=(Math.imul(31,h)+s.charCodeAt(i))|0; } return h; }
 function escCom(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
+const _PROFANITY = ['fuck','shit','bitch','cunt','nigger','nigga','motherfucker','whore','slut'];
+function _hasProfanity(t){ var l=t.toLowerCase(); return _PROFANITY.some(function(w){return l.indexOf(w)!==-1;}); }
+
+function reportMessage(key, room) {
+    if (!_fbDb || !_fbUser || !key) return;
+    _fbDb.ref('reports/'+room+'/'+key).set({reporter:_fbUser.uid,ts:Date.now()})
+        .then(function(){ showToast('Message reported. Thank you.','info'); })
+        .catch(function(){ showToast('Could not send report.','gold'); });
+}
+
 function sendCommunityMessage() {
     if (!_fbDb || !_fbUser) { showToast('Community not connected.','gold'); return; }
     var input = document.getElementById('community-input');
     var text = (input.value||'').trim();
     if (!text) return;
+    if (_hasProfanity(text)) { showToast('Message contains prohibited language.','gold'); return; }
     var now = Date.now();
     if (now - _lastMsgTime < 3000) { showToast('Please wait a moment before sending again.','gold'); return; }
     _lastMsgTime = now;
