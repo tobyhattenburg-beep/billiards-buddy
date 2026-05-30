@@ -127,6 +127,16 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
 #community-input{width:100%;background:rgba(0,0,0,0.35);border:1px solid var(--borderg);color:var(--ivory);padding:10px 13px;border-radius:8px;outline:none;font-family:'DM Mono',monospace;font-size:13px;margin-bottom:8px;}
 #community-input:focus{border-color:var(--gold2);}
 #venues-map .leaflet-container{border-radius:12px;}
+/* SHOT ANALYZER */
+#analyzer-viewport{position:relative;background:#000;width:100%;overflow:hidden;border-radius:12px;margin:0 0 14px;}
+#analyzer-video{width:100%;height:100%;object-fit:cover;display:block;}
+#analyzer-canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;}
+#analyzer-step-badge{position:absolute;top:12px;left:12px;background:rgba(6,26,11,0.88);border:1px solid var(--gold);border-radius:20px;padding:5px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--gold2);letter-spacing:1px;pointer-events:none;}
+#analyzer-difficulty{position:absolute;top:12px;right:12px;display:none;background:rgba(6,26,11,0.88);border:1px solid var(--borderg);border-radius:20px;padding:5px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--ivory);pointer-events:none;}
+#analyzer-cam-off{display:flex;align-items:center;justify-content:center;height:100%;min-height:220px;flex-direction:column;gap:10px;color:var(--dim);font-family:'DM Mono',monospace;font-size:12px;}
+.analyzer-stat-tile{background:rgba(0,0,0,0.35);border-radius:8px;padding:10px;text-align:center;}
+.analyzer-stat-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:4px;}
+.analyzer-stat-val{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--ivory);}
 </style>
 </head>
 <body>
@@ -146,6 +156,7 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
       <div class="nav-item" onclick="showScreen('tips')"><span class="nav-icon">&#127775;</span><span class="nav-label">Tips</span></div>
       <div class="nav-item" onclick="showScreen('community')"><span class="nav-icon">&#128172;</span><span class="nav-label">Community</span></div>
       <div class="nav-item" onclick="showScreen('profile')"><span class="nav-icon">&#128100;</span><span class="nav-label">My Profile</span></div>
+      <div class="nav-item" onclick="showScreen('analyzer')"><span class="nav-icon">&#127919;</span><span class="nav-label">Shot Analyzer</span></div>
     </nav>
     <div class="sidebar-footer">v9.2 &#8212; PWA</div>
   </aside>
@@ -375,6 +386,42 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
       </div></div>
     </div>
 
+    <!-- SHOT ANALYZER -->
+    <div class="screen" id="screen-analyzer">
+      <div class="glass-overlay">
+        <div class="page-header"><div class="eyebrow">AI Shot Lab</div><h2>Shot Analyzer</h2></div>
+        <div class="content" style="padding:14px;">
+          <div id="analyzer-viewport" style="aspect-ratio:4/3;max-height:52vh;">
+            <video id="analyzer-video" autoplay playsinline muted></video>
+            <canvas id="analyzer-canvas"></canvas>
+            <div id="analyzer-step-badge"></div>
+            <div id="analyzer-difficulty"></div>
+          </div>
+          <div id="analyzer-instructions" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);text-align:center;margin-bottom:12px;min-height:28px;line-height:1.5;"></div>
+          <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="btn btn-felt" onclick="resetAnalyzer()" style="padding:10px 22px;">&#8635; Reset</button>
+            <button class="btn btn-felt" onclick="switchAnalyzerCamera()" style="padding:10px 22px;">&#128247; Flip</button>
+            <button class="btn btn-gold" onclick="requestAIAnalysis()" style="padding:10px 22px;opacity:0.5;" disabled>&#129504; AI Analysis</button>
+          </div>
+          <div id="analyzer-info" style="display:none;" class="card">
+            <div class="eyebrow" style="margin-bottom:10px;">Shot Geometry</div>
+            <div id="analyzer-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"></div>
+            <div style="padding:10px;background:rgba(212,160,23,0.06);border:1px solid rgba(200,134,10,0.25);border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);text-align:center;line-height:1.6;">
+              &#129504; AI shot coaching — coming soon.<br>Connect an Anthropic API key to activate.
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;padding:14px;">
+            <div class="eyebrow" style="margin-bottom:8px;">How to use</div>
+            <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);line-height:1.9;">
+              1&#65039;&#8419; Point camera at the table &amp; tap your <b style="color:var(--ivory);">cue ball</b><br>
+              2&#65039;&#8419; Tap the <b style="color:var(--gold2);">object ball</b> you want to pocket<br>
+              3&#65039;&#8419; Tap the <b style="color:var(--ivory);">target pocket</b> — paths appear instantly
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -470,6 +517,7 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
   <div class="more-drawer-item" onclick="drawerNav('rules')"><span class="more-item-icon">&#128203;</span><div><div class="more-item-label">Rules Directory</div><div class="more-item-sub">WPA Interactive Database</div></div></div>
   <div class="more-drawer-item" onclick="drawerNav('tips')"><span class="more-item-icon">&#127775;</span><div><div class="more-item-label">Tips &amp; Strategy</div><div class="more-item-sub">Pro Technique &amp; Game Plans</div></div></div>
   <div class="more-drawer-item" onclick="drawerNav('community')"><span class="more-item-icon">&#128172;</span><div><div class="more-item-label">Community</div><div class="more-item-sub">Chat with Players Worldwide</div></div></div>
+  <div class="more-drawer-item" onclick="drawerNav('analyzer')"><span class="more-item-icon">&#127919;</span><div><div class="more-item-label">Shot Analyzer</div><div class="more-item-sub">Geometry &amp; AI Shot Coaching</div></div></div>
 </div>
 
 <script>
@@ -491,7 +539,8 @@ function showToast(msg, type) {
 // NAVIGATION ENGINE
 // ════════════════════════════════════════════════════════
 function showScreen(id) {
-    const all = ['home','venues','academy','timer','shop','rules','tips','community','profile','score','bracket'];
+    const all = ['home','venues','academy','timer','shop','rules','tips','community','profile','score','bracket','analyzer'];
+    const prev = all.find(s => { const el=document.getElementById('screen-'+s); return el&&el.classList.contains('active'); });
     all.forEach(s => { const el = document.getElementById('screen-'+s); if(el) el.classList.remove('active'); });
     const t = document.getElementById('screen-'+id);
     if(t) { t.classList.add('active'); window.scrollTo(0,0); }
@@ -499,6 +548,8 @@ function showScreen(id) {
         setTimeout(function() { window._leafletMap.invalidateSize(); }, 150);
     }
     if (id === 'community') { initCommunity(); }
+    if (id === 'analyzer') { initAnalyzer(); }
+    if (prev === 'analyzer' && id !== 'analyzer') { stopAnalyzer(); }
     document.querySelectorAll('.nav-item,.bn-item').forEach(btn => {
         btn.classList.remove('active');
         const a = btn.getAttribute('onclick');
@@ -1110,7 +1161,7 @@ function filterRules(){ renderRules(); }
 // ════════════════════════════════════════════════════════
 // MORE DRAWER
 // ════════════════════════════════════════════════════════
-const DRAWER_SCREENS=['academy','bracket','timer','rules','tips','community'];
+const DRAWER_SCREENS=['academy','bracket','timer','rules','tips','community','analyzer'];
 function toggleMoreDrawer(){ const d=document.getElementById('more-drawer'); d.classList.contains('open')?closeMoreDrawer():openMoreDrawer(); }
 function openMoreDrawer(){ document.getElementById('more-drawer').classList.add('open'); document.getElementById('more-backdrop').classList.add('open'); document.getElementById('bn-more').classList.add('active'); }
 function closeMoreDrawer(){
@@ -1409,6 +1460,224 @@ function updateCharCount() {
     var input = document.getElementById('community-input');
     var cc = document.getElementById('community-char-count');
     if (input && cc) cc.textContent = (input.value||'').length + ' / 400';
+}
+
+// ════════════════════════════════════════════════════════
+// SHOT ANALYZER — Geometry Engine
+// ════════════════════════════════════════════════════════
+var _aStream = null, _aFacing = 'environment', _aStep = 0, _aPts = [], _aRaf = null;
+
+const _ASTEPS = [
+    'Step 1 — Tap your cue ball (white)',
+    'Step 2 — Tap the object ball to pocket',
+    'Step 3 — Tap the target pocket'
+];
+
+function initAnalyzer() {
+    if (_aStream) { _setAStep(_aStep); return; }
+    var video = document.getElementById('analyzer-video');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast('Camera not supported on this browser.', 'gold'); return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: _aFacing, width:{ideal:1280}, height:{ideal:720} }, audio: false })
+        .then(function(stream) {
+            _aStream = stream;
+            video.srcObject = stream;
+            video.play();
+            video.addEventListener('loadedmetadata', function() { _resizeACanvas(); _startALoop(); }, { once: true });
+        })
+        .catch(function() { showToast('Camera access denied — allow camera in browser settings.', 'gold'); });
+    var canvas = document.getElementById('analyzer-canvas');
+    canvas.addEventListener('click', _onATap);
+    canvas.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        var t = e.changedTouches[0], rect = canvas.getBoundingClientRect();
+        _onATap({ clientX: t.clientX, clientY: t.clientY, _rect: rect });
+    }, { passive: false });
+    _setAStep(0);
+}
+
+function _resizeACanvas() {
+    var vp = document.getElementById('analyzer-viewport');
+    var cv = document.getElementById('analyzer-canvas');
+    if (!vp || !cv) return;
+    cv.width  = vp.offsetWidth;
+    cv.height = vp.offsetHeight;
+}
+
+function _onATap(e) {
+    if (_aStep >= 3) return;
+    var cv = document.getElementById('analyzer-canvas');
+    var rect = e._rect || cv.getBoundingClientRect();
+    _aPts[_aStep] = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    _aStep++;
+    _setAStep(_aStep);
+    if (_aStep >= 3) _showAResult();
+}
+
+function _setAStep(s) {
+    var badge = document.getElementById('analyzer-step-badge');
+    var instr = document.getElementById('analyzer-instructions');
+    if (s < 3) {
+        if (badge) badge.textContent = 'Step ' + (s+1) + ' of 3';
+        if (instr) instr.textContent = _ASTEPS[s];
+    } else {
+        if (badge) badge.textContent = 'Analysis Ready';
+        if (instr) instr.textContent = 'Tap Reset to analyze another shot.';
+    }
+}
+
+function _startALoop() {
+    function tick() { _drawAFrame(); _aRaf = requestAnimationFrame(tick); }
+    tick();
+}
+
+function _drawAFrame() {
+    var cv = document.getElementById('analyzer-canvas');
+    if (!cv) return;
+    var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    var R = Math.max(14, W * 0.03);
+    if (_aPts[0]) _drawBall(ctx, _aPts[0], '#ffffff', R);
+    if (_aPts[1]) _drawBall(ctx, _aPts[1], '#d4a017', R);
+    if (_aPts[2]) _drawPocket(ctx, _aPts[2]);
+    if (_aPts[0] && _aPts[1] && _aPts[2]) _drawPaths(ctx, _aPts[0], _aPts[1], _aPts[2], R, W, H);
+}
+
+function _drawBall(ctx, p, color, R) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.x, p.y, R, 0, Math.PI*2);
+    ctx.fillStyle = color === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(212,160,23,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#061a0b';
+    ctx.font = 'bold ' + Math.round(R*0.72) + 'px "DM Mono",monospace';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(color === '#ffffff' ? 'C' : 'O', p.x, p.y);
+    ctx.restore();
+}
+
+function _drawPocket(ctx, p) {
+    ctx.save();
+    ctx.beginPath(); ctx.arc(p.x, p.y, 16, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2;
+    ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = '#f0c040'; ctx.font = 'bold 13px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('P', p.x, p.y);
+    ctx.restore();
+}
+
+function _drawPaths(ctx, cue, obj, pocket, R, W, H) {
+    var dx = obj.x - pocket.x, dy = obj.y - pocket.y;
+    var dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 1) return;
+    var nx = dx/dist, ny = dy/dist;
+    // Ghost ball: where cue ball center must be at moment of contact
+    var ghostX = obj.x + nx * R * 2, ghostY = obj.y + ny * R * 2;
+
+    // Cue travel line → ghost ball
+    _arrow(ctx, cue.x, cue.y, ghostX, ghostY, 'rgba(255,255,255,0.9)', 2.5, []);
+    // Object ball → pocket
+    _arrow(ctx, obj.x, obj.y, pocket.x, pocket.y, 'rgba(212,160,23,0.95)', 3, []);
+    // Ghost ball outline (aim target)
+    ctx.save();
+    ctx.beginPath(); ctx.arc(ghostX, ghostY, R, 0, Math.PI*2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+    // Cue ball deflection after contact (90° rule for stun / center-ball)
+    var oDirX = pocket.x - obj.x, oDirY = pocket.y - obj.y;
+    var oLen = Math.sqrt(oDirX*oDirX + oDirY*oDirY);
+    var perpX = -oDirY/oLen, perpY = oDirX/oLen;
+    // Flip perp to the side opposite the incoming cue ball
+    var approachX = ghostX - cue.x, approachY = ghostY - cue.y;
+    if (approachX*perpX + approachY*perpY < 0) { perpX=-perpX; perpY=-perpY; }
+    var dLen = Math.min(W, H) * 0.28;
+    var ex = Math.max(8, Math.min(W-8, ghostX + perpX*dLen));
+    var ey = Math.max(8, Math.min(H-8, ghostY + perpY*dLen));
+    _arrow(ctx, ghostX, ghostY, ex, ey, 'rgba(255,255,255,0.45)', 1.5, [6,5]);
+}
+
+function _arrow(ctx, x1, y1, x2, y2, color, lw, dash) {
+    var dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+    if (len < 6) return;
+    ctx.save();
+    ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw;
+    ctx.setLineDash(dash||[]);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    var ang=Math.atan2(dy,dx), aL=Math.max(9,lw*4.5);
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-aL*Math.cos(ang-0.42), y2-aL*Math.sin(ang-0.42));
+    ctx.lineTo(x2-aL*Math.cos(ang+0.42), y2-aL*Math.sin(ang+0.42));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+}
+
+function _showAResult() {
+    var p = _aPts, info = document.getElementById('analyzer-info'), stats = document.getElementById('analyzer-stats');
+    var diff = document.getElementById('analyzer-difficulty');
+    if (!info || !p[0] || !p[1] || !p[2]) return;
+
+    // Cut angle between cue→obj line and obj→pocket line
+    var ang1 = Math.atan2(p[1].y-p[0].y, p[1].x-p[0].x);
+    var ang2 = Math.atan2(p[2].y-p[1].y, p[2].x-p[1].x);
+    var cut = Math.abs((ang2-ang1)*180/Math.PI);
+    if (cut > 180) cut = 360-cut;
+    cut = Math.min(cut, 90);
+
+    var d1 = Math.hypot(p[1].x-p[0].x, p[1].y-p[0].y);
+    var d2 = Math.hypot(p[2].x-p[1].x, p[2].y-p[1].y);
+    var cv = document.getElementById('analyzer-canvas');
+    var maxD = Math.max(cv ? cv.width : 600, 1);
+
+    var difficulty = Math.min(10, (cut/9 + Math.min(d1/maxD*8, 5)) / 2);
+    var diffLabel = difficulty < 3 ? 'Easy' : difficulty < 6 ? 'Moderate' : difficulty < 8 ? 'Hard' : 'Expert';
+    var diffColor = difficulty < 3 ? 'var(--green2)' : difficulty < 6 ? 'var(--gold)' : difficulty < 8 ? 'var(--trim)' : 'var(--red2)';
+    var shotType = cut < 8 ? 'Straight' : cut < 25 ? 'Slight Cut' : cut < 55 ? 'Cut Shot' : 'Thin Cut';
+    var tip = cut < 12 ? 'Center-ball — stop or follow' : cut < 40 ? 'Ghost ball aim — smooth stroke' : 'Thin cut — slow down, aim carefully';
+
+    var tiles = [
+        ['Cut Angle', Math.round(cut) + '°'],
+        ['Difficulty', diffLabel],
+        ['Shot Type', shotType],
+        ['Coaching Tip', tip]
+    ];
+    stats.innerHTML = tiles.map(function(t) {
+        return '<div class="analyzer-stat-tile"><div class="analyzer-stat-label">'+t[0]+'</div><div class="analyzer-stat-val" style="font-size:'+(t[0]==='Coaching Tip'?'11px':'17px')+';color:'+(t[0]==='Difficulty'?diffColor:'var(--ivory)')+';">'+t[1]+'</div></div>';
+    }).join('');
+
+    if (diff) { diff.style.display='block'; diff.textContent=diffLabel+' · '+difficulty.toFixed(1)+'/10'; diff.style.color=diffColor; }
+    info.style.display='block';
+}
+
+function resetAnalyzer() {
+    _aStep=0; _aPts=[];
+    _setAStep(0);
+    var info=document.getElementById('analyzer-info'), diff=document.getElementById('analyzer-difficulty');
+    if (info) info.style.display='none';
+    if (diff) diff.style.display='none';
+}
+
+function switchAnalyzerCamera() {
+    _aFacing = _aFacing==='environment' ? 'user' : 'environment';
+    stopAnalyzer();
+    resetAnalyzer();
+    initAnalyzer();
+}
+
+function stopAnalyzer() {
+    if (_aRaf) { cancelAnimationFrame(_aRaf); _aRaf=null; }
+    if (_aStream) { _aStream.getTracks().forEach(function(t){t.stop();}); _aStream=null; }
+    var video=document.getElementById('analyzer-video');
+    if (video) video.srcObject=null;
+}
+
+function requestAIAnalysis() {
+    showToast('AI coaching coming soon — connect an Anthropic API key to activate.', 'gold');
 }
 
 // ════════════════════════════════════════════════════════
