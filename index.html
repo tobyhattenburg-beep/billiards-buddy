@@ -401,13 +401,24 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">
             <button class="btn btn-felt" onclick="resetAnalyzer()" style="padding:10px 22px;">&#8635; Reset</button>
             <button class="btn btn-felt" onclick="switchAnalyzerCamera()" style="padding:10px 22px;">&#128247; Flip</button>
-            <button class="btn btn-gold" onclick="requestAIAnalysis()" style="padding:10px 22px;opacity:0.5;" disabled>&#129504; AI Analysis</button>
+            <button class="btn btn-gold" id="btn-ai-analysis" onclick="requestAIAnalysis()" style="padding:10px 22px;opacity:0.4;">&#129504; AI Analysis</button>
           </div>
           <div id="analyzer-info" style="display:none;" class="card">
             <div class="eyebrow" style="margin-bottom:10px;">Shot Geometry</div>
             <div id="analyzer-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"></div>
-            <div style="padding:10px;background:rgba(212,160,23,0.06);border:1px solid rgba(200,134,10,0.25);border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);text-align:center;line-height:1.6;">
-              &#129504; AI shot coaching — coming soon.<br>Connect an Anthropic API key to activate.
+            <div id="ai-result-area" style="margin-top:4px;">
+              <div id="ai-idle" style="padding:10px;background:rgba(212,160,23,0.06);border:1px solid rgba(200,134,10,0.25);border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);text-align:center;line-height:1.7;">
+                &#129504; Tap <b style="color:var(--ivory);">AI Analysis</b> for coaching from Claude
+              </div>
+              <div id="ai-loading" style="display:none;padding:16px;text-align:center;">
+                <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--gold2);letter-spacing:1px;">&#129504; Analyzing shot...</div>
+                <div style="margin-top:6px;font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);">Claude is reviewing the table...</div>
+              </div>
+              <div id="ai-result" style="display:none;padding:12px 14px;background:rgba(212,160,23,0.08);border:1px solid rgba(200,134,10,0.4);border-radius:8px;">
+                <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">&#129504; Claude&#8217;s Coaching</div>
+                <div id="ai-advice-text" style="font-family:'Libre Baskerville',serif;font-size:13px;color:var(--ivory);line-height:1.75;"></div>
+                <button onclick="_aiReset()" style="margin-top:10px;background:none;border:none;font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);cursor:pointer;letter-spacing:1px;">&#8635; Ask again</button>
+              </div>
             </div>
           </div>
           <div class="card" style="margin-top:10px;padding:14px;">
@@ -1011,6 +1022,7 @@ function playClockTick(){
 const AMZN_TAG  = 'billiardsbuddy-20';
 const EBAY_CAMP = '5338940929';
 const GOOGLE_PLACES_KEY = ''; // Paste your Google Places API key here for richer venue results
+const AI_PROXY_URL = ''; // Paste your Cloudflare Worker URL here (e.g. https://bb-ai.yourname.workers.dev)
 
 function amzn(q){ return 'https://www.amazon.com/s?k='+encodeURIComponent(q)+'&tag='+AMZN_TAG; }
 function ebay(q){ return 'https://rover.ebay.com/rover/1/711-53200-19255-0/1?toolid=10001&campid='+EBAY_CAMP+'&customid=&mpre='+encodeURIComponent('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(q)); }
@@ -1465,7 +1477,7 @@ function updateCharCount() {
 // ════════════════════════════════════════════════════════
 // SHOT ANALYZER — Geometry Engine
 // ════════════════════════════════════════════════════════
-var _aStream = null, _aFacing = 'environment', _aStep = 0, _aPts = [], _aRaf = null;
+var _aStream = null, _aFacing = 'environment', _aStep = 0, _aPts = [], _aRaf = null, _aLastResult = null;
 
 const _ASTEPS = [
     'Step 1 — Tap your cue ball (white)',
@@ -1650,16 +1662,23 @@ function _showAResult() {
         return '<div class="analyzer-stat-tile"><div class="analyzer-stat-label">'+t[0]+'</div><div class="analyzer-stat-val" style="font-size:'+(t[0]==='Coaching Tip'?'11px':'17px')+';color:'+(t[0]==='Difficulty'?diffColor:'var(--ivory)')+';">'+t[1]+'</div></div>';
     }).join('');
 
+    _aLastResult = { cut: cut, difficulty: difficulty.toFixed(1), shotType: shotType, diffLabel: diffLabel };
     if (diff) { diff.style.display='block'; diff.textContent=diffLabel+' · '+difficulty.toFixed(1)+'/10'; diff.style.color=diffColor; }
     info.style.display='block';
+    var aiBtn = document.getElementById('btn-ai-analysis');
+    if (aiBtn) { aiBtn.style.opacity = AI_PROXY_URL ? '1' : '0.55'; }
+    _aiReset();
 }
 
 function resetAnalyzer() {
-    _aStep=0; _aPts=[];
+    _aStep=0; _aPts=[]; _aLastResult=null;
     _setAStep(0);
     var info=document.getElementById('analyzer-info'), diff=document.getElementById('analyzer-difficulty');
     if (info) info.style.display='none';
     if (diff) diff.style.display='none';
+    var aiBtn=document.getElementById('btn-ai-analysis');
+    if (aiBtn) aiBtn.style.opacity='0.4';
+    _aiReset();
 }
 
 function switchAnalyzerCamera() {
@@ -1676,8 +1695,70 @@ function stopAnalyzer() {
     if (video) video.srcObject=null;
 }
 
+function _aiReset() {
+    var idle=document.getElementById('ai-idle'), load=document.getElementById('ai-loading'), res=document.getElementById('ai-result');
+    if (idle) idle.style.display='block';
+    if (load) load.style.display='none';
+    if (res)  res.style.display='none';
+}
+
+function _captureAnalyzerImage() {
+    var video=document.getElementById('analyzer-video'), overlay=document.getElementById('analyzer-canvas');
+    if (!video || !overlay) return null;
+    var tmp=document.createElement('canvas');
+    tmp.width=overlay.width; tmp.height=overlay.height;
+    var ctx=tmp.getContext('2d');
+    try { ctx.drawImage(video,0,0,tmp.width,tmp.height); } catch(e){}
+    ctx.drawImage(overlay,0,0);
+    return tmp.toDataURL('image/jpeg',0.82).split(',')[1];
+}
+
 function requestAIAnalysis() {
-    showToast('AI coaching coming soon — connect an Anthropic API key to activate.', 'gold');
+    if (!_aLastResult) { showToast('Complete the shot setup first — tap cue ball, object ball, and pocket.','gold'); return; }
+    if (!AI_PROXY_URL) {
+        showToast('AI proxy not configured — set AI_PROXY_URL in index.html after deploying worker.js to Cloudflare.','gold');
+        return;
+    }
+    var image = _captureAnalyzerImage();
+    if (!image) { showToast('Could not capture camera image.','gold'); return; }
+
+    var idle=document.getElementById('ai-idle'), load=document.getElementById('ai-loading'), res=document.getElementById('ai-result');
+    var aiBtn=document.getElementById('btn-ai-analysis');
+    if (idle) idle.style.display='none';
+    if (load) load.style.display='block';
+    if (res)  res.style.display='none';
+    if (aiBtn) { aiBtn.disabled=true; aiBtn.style.opacity='0.5'; }
+
+    fetch(AI_PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            image: image,
+            cutAngle:   _aLastResult.cut,
+            shotType:   _aLastResult.shotType,
+            difficulty: _aLastResult.difficulty
+        })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        if (load) load.style.display='none';
+        if (data.error) {
+            showToast('AI error: ' + data.error, 'gold');
+            _aiReset();
+        } else {
+            var advEl=document.getElementById('ai-advice-text');
+            if (advEl) advEl.textContent = data.advice;
+            if (res) res.style.display='block';
+        }
+    })
+    .catch(function(e) {
+        if (load) load.style.display='none';
+        showToast('Could not reach AI proxy — check your Worker URL and connection.','gold');
+        _aiReset();
+    })
+    .finally(function() {
+        if (aiBtn) { aiBtn.disabled=false; aiBtn.style.opacity = AI_PROXY_URL ? '1' : '0.55'; }
+    });
 }
 
 // ════════════════════════════════════════════════════════
