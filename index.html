@@ -148,6 +148,18 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
 .game-stat{background:rgba(0,0,0,0.4);border:1px solid rgba(30,92,42,0.6);border-radius:10px;padding:10px 16px;text-align:center;min-width:64px;}
 .game-stat-val{font-family:'Playfair Display',serif;font-size:24px;font-weight:900;color:var(--gold2);line-height:1;}
 .game-stat-lbl{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-top:3px;}
+#game-modes{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;}
+#game-controls{display:flex;align-items:center;gap:12px;margin-top:10px;}
+.game-eng-wrap{display:flex;flex-direction:column;align-items:center;gap:3px;flex-shrink:0;}
+#game-english{width:54px;height:54px;border-radius:50%;cursor:pointer;touch-action:none;border:2px solid var(--borderg);box-shadow:0 2px 6px rgba(0,0,0,0.4);}
+.game-ctrl-lbl{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);}
+.game-power-col{flex:1;display:flex;flex-direction:column;gap:5px;min-width:90px;}
+#game-power-range{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--green2),var(--gold2),var(--red2));outline:none;cursor:pointer;}
+#game-power-range::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--ivory);border:2px solid var(--trim);cursor:pointer;}
+#game-power-range::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--ivory);border:2px solid var(--trim);cursor:pointer;}
+.game-act-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+#game-stage:fullscreen,#game-stage:-webkit-full-screen{background:#061a0b;padding:18px;display:flex;flex-direction:column;justify-content:center;gap:14px;}
+#game-stage:fullscreen #game-canvas,#game-stage:-webkit-full-screen #game-canvas{margin:0 auto;}
 </style>
 </head>
 <body>
@@ -405,8 +417,14 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
     <!-- POOL GAME -->
     <div class="screen" id="screen-game">
       <div class="glass-overlay">
-        <div class="page-header"><div class="eyebrow">Pocket Practice</div><h2>9-Ball Pool</h2></div>
+        <div class="page-header"><div class="eyebrow">Pocket Practice</div><h2 id="game-title">9-Ball Pool</h2></div>
         <div class="content" style="padding:10px 14px;">
+          <div id="game-modes">
+            <div class="pill active" onclick="setGameMode('9ball',this)">9-Ball</div>
+            <div class="pill" onclick="setGameMode('8ball',this)">8-Ball</div>
+            <div class="pill" onclick="setGameMode('3ball',this)">3-Ball</div>
+            <div class="pill" onclick="setGameMode('practice',this)">Practice</div>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div style="display:flex;gap:8px;">
               <div class="game-stat"><div class="game-stat-val" id="game-target">1</div><div class="game-stat-lbl">Target</div></div>
@@ -415,23 +433,37 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
             </div>
             <button class="btn btn-felt" onclick="newGame()" style="padding:8px 18px;font-size:12px;">&#8635; New</button>
           </div>
-          <div id="game-viewport">
-            <canvas id="game-canvas"></canvas>
-            <div id="game-message">
-              <div id="game-msg-title" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--gold2);text-shadow:0 0 24px rgba(240,192,64,0.5);"></div>
-              <div id="game-msg-sub" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:4px;"></div>
-              <button class="btn btn-gold" onclick="newGame()" style="padding:10px 32px;margin-top:12px;font-size:14px;">Play Again</button>
+          <div id="game-stage">
+            <div id="game-viewport">
+              <canvas id="game-canvas"></canvas>
+              <div id="game-message">
+                <div id="game-msg-title" style="font-family:'Playfair Display',serif;font-size:28px;font-weight:900;color:var(--gold2);text-shadow:0 0 24px rgba(240,192,64,0.5);"></div>
+                <div id="game-msg-sub" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px;margin-top:4px;"></div>
+                <button class="btn btn-gold" onclick="newGame()" style="padding:10px 32px;margin-top:12px;font-size:14px;">Play Again</button>
+              </div>
+            </div>
+            <div id="game-controls">
+              <div class="game-eng-wrap">
+                <canvas id="game-english" width="54" height="54"></canvas>
+                <span class="game-ctrl-lbl">English</span>
+              </div>
+              <div class="game-power-col">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <span class="game-ctrl-lbl">Power</span>
+                  <span class="game-ctrl-lbl" id="game-power-pct" style="color:var(--gold2);">50%</span>
+                </div>
+                <input type="range" id="game-power-range" min="0" max="100" value="50" oninput="_gSetPowerPct(this.value)">
+              </div>
+              <div class="game-act-btns">
+                <button class="btn btn-gold" id="game-shoot-btn" onclick="_gShoot()" style="padding:9px 16px;font-size:13px;">&#127919; Shoot</button>
+                <button class="btn btn-felt" onclick="_gFullscreen()" style="padding:7px 16px;font-size:11px;">&#9974; Full</button>
+              </div>
             </div>
           </div>
-          <div style="margin-top:8px;display:flex;align-items:center;gap:10px;">
-            <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;white-space:nowrap;">Power</div>
-            <div style="flex:1;height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
-              <div id="game-power-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--green2),var(--gold2),var(--red2));border-radius:3px;transition:width 0.04s;"></div>
-            </div>
-          </div>
+          <div id="game-howto" style="margin-top:12px;background:rgba(212,160,23,0.06);border:1px solid rgba(200,134,10,0.25);border-radius:8px;padding:10px 14px;font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);line-height:1.7;"></div>
           <div style="margin-top:8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);text-align:center;line-height:1.7;">
-            Drag on the table to aim &amp; set power &mdash; release to shoot<br>
-            Pocket balls 1&ndash;9 in order &mdash; combo the 9-ball to win early
+            Drag the table to aim &amp; set power, release to shoot &mdash; or use the Power slider, English ball &amp; Shoot button.<br>
+            &#127918; Gamepad: left stick aims &middot; right stick = English &middot; trigger = power &middot; A shoots &middot; Y fullscreen &middot; Start re-racks
           </div>
         </div>
       </div>
@@ -452,7 +484,7 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
           <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;">
             <button class="btn btn-felt" onclick="resetAnalyzer()" style="padding:10px 22px;">&#8635; Reset</button>
             <button class="btn btn-felt" onclick="switchAnalyzerCamera()" style="padding:10px 22px;">&#128247; Flip</button>
-            <button class="btn btn-gold" id="btn-ai-analysis" onclick="requestAIAnalysis()" style="padding:10px 22px;opacity:0.4;">&#129504; AI Analysis</button>
+            <button class="btn btn-gold" id="btn-ai-analysis" onclick="requestAIAnalysis()" style="padding:10px 22px;opacity:0.55;">&#129504; AI Setup Needed</button>
           </div>
           <div id="analyzer-info" style="display:none;" class="card">
             <div class="eyebrow" style="margin-bottom:10px;">Shot Geometry</div>
@@ -625,8 +657,13 @@ function showScreen(id) {
 // ════════════════════════════════════════════════════════
 // PERSISTENCE LAYER
 // ════════════════════════════════════════════════════════
-const DEFAULT_PROFILE = { name:"Hustler Pro", level:"Beginner", favoriteVenues:[], stats:{ gamesWon:0, shotsTimed:0, practiceHours:0 } };
+const DEFAULT_PROFILE = { name:"Hustler Pro", level:"Beginner", favoriteVenues:[], stats:{ gamesWon:0, shotsTimed:0, practiceHours:0, poolBests:{} } };
 let userProfile = JSON.parse(localStorage.getItem('bb_profile')) || JSON.parse(JSON.stringify(DEFAULT_PROFILE));
+if (!userProfile.stats) userProfile.stats = {};
+if (!userProfile.stats.poolBests) {
+    userProfile.stats.poolBests = {};
+    if (typeof userProfile.stats.poolBest === 'number') userProfile.stats.poolBests['9ball'] = userProfile.stats.poolBest;
+}
 if (!userProfile.favoriteVenues) userProfile.favoriteVenues = [];
 
 function saveProfile() { localStorage.setItem('bb_profile', JSON.stringify(userProfile)); updateProfileUI(); }
@@ -1529,14 +1566,18 @@ function updateCharCount() {
 }
 
 // ════════════════════════════════════════════════════════
-// POOL GAME — 9-Ball Physics Engine
+// POOL GAME — Physics Engine (9-Ball · 8-Ball · 3-Ball · Practice)
 // ════════════════════════════════════════════════════════
-var _gS = null, _gRafId = null, _gEvented = false;
-const _GFR = 0.9865, _GSTOP = 0.11, _GPOW = 20, _GDRAG = 130;
+var _gS = null, _gRafId = null, _gEvented = false, _gEngEvented = false, _gEngDrag = false, _gMode = '9ball', _gPadPrev = {};
+const _GFR = 0.9865, _GSTOP = 0.11, _GPOW = 20, _GDRAG = 130, _GSPIN = 4.2;
 
+// Standard pool colors: 0=cue, 1-7 solids, 8=black, 9-15 reuse 1-7 hues as stripes
 function _gColor(n) {
-    return ['#f0e8d0','#e8c820','#1a5baa','#c0392b','#7b2d8b','#e87722','#1e7a2e','#6b1a1a','#111111','#e8c820'][n]||'#888';
+    var c = ['#f0e8d0','#e8c820','#1a5baa','#c0392b','#7b2d8b','#e87722','#1e7a2e','#7a1f1f','#111111'];
+    if (n <= 8) return c[n] || '#888';
+    return c[n-8] || '#888';
 }
+function _gStriped(n) { return n > 8; }
 
 function _gGeom(cv) {
     var W=cv.width, H=cv.height, rail=Math.round(W*0.044);
@@ -1546,81 +1587,142 @@ function _gGeom(cv) {
         pockets:[{x:L,y:T},{x:W/2,y:0},{x:R,y:T},{x:L,y:B},{x:W/2,y:H},{x:R,y:B}] };
 }
 
-function _gMakeBalls(g) {
-    var sp=g.bR*2.06, dx=sp*0.866, hy=sp*0.5;
-    var cx=g.L+(g.R-g.L)*0.72, cy=(g.T+g.B)/2;
-    var layout=[[1,cx-2*dx,cy],[2,cx-dx,cy-hy],[3,cx-dx,cy+hy],
-                [4,cx,cy-sp],[9,cx,cy],[5,cx,cy+sp],
-                [6,cx+dx,cy-hy],[7,cx+dx,cy+hy],[8,cx+2*dx,cy]];
-    var balls=layout.map(function(p){ return {num:p[0],x:p[1],y:p[2],vx:0,vy:0,r:g.bR,pocketed:false}; });
-    var cue={num:0,x:g.L+(g.R-g.L)*0.25,y:cy,vx:0,vy:0,r:g.bR,pocketed:false};
-    return {balls:[cue].concat(balls), cue:cue};
+function _gBall(num,x,y,g){ return {num:num,x:x,y:y,vx:0,vy:0,r:g.bR,pocketed:false,spin:0}; }
+
+// Triangle rack opening toward the cue (apex on the left, rows extending right)
+function _gRackTriangle(g, nums) {
+    var sp=g.bR*2.06, dx=sp*0.875;
+    var fx=g.L+(g.R-g.L)*0.72, fy=(g.T+g.B)/2;
+    var balls=[], idx=0, r=0;
+    while(idx<nums.length){
+        for(var k=0;k<=r && idx<nums.length;k++){
+            balls.push(_gBall(nums[idx], fx+r*dx, fy+(k-r/2)*sp, g));
+            idx++;
+        }
+        r++;
+    }
+    return balls;
+}
+
+function _gMakeBalls(g, mode) {
+    var cy=(g.T+g.B)/2, rackBalls;
+    if(mode==='9ball'){
+        var sp=g.bR*2.06, dx=sp*0.866, hy=sp*0.5, cx=g.L+(g.R-g.L)*0.72;
+        var layout=[[1,cx-2*dx,cy],[2,cx-dx,cy-hy],[3,cx-dx,cy+hy],
+                    [4,cx,cy-sp],[9,cx,cy],[5,cx,cy+sp],
+                    [6,cx+dx,cy-hy],[7,cx+dx,cy+hy],[8,cx+2*dx,cy]];
+        rackBalls=layout.map(function(p){ return _gBall(p[0],p[1],p[2],g); });
+    } else if(mode==='3ball'){
+        rackBalls=_gRackTriangle(g,[1,2,3]);
+    } else { // 8ball + practice: full 15-ball triangle, 8 in the center
+        rackBalls=_gRackTriangle(g,[1,9,2,3,8,10,4,11,5,12,6,13,7,14,15]);
+    }
+    var cue=_gBall(0, g.L+(g.R-g.L)*0.25, cy, g);
+    return {balls:[cue].concat(rackBalls), cue:cue};
 }
 
 function initGame() {
     if (_gRafId) return;
     var cv=document.getElementById('game-canvas'); if(!cv) return;
-    _gResizeCv(); _gBindEvents(); newGame();
+    _gResizeCv(); _gBindEvents(); _gEnglishInit(); _gUpdateHowto(_gMode); newGame();
 }
 function stopGame() { if(_gRafId){cancelAnimationFrame(_gRafId);_gRafId=null;} _gS=null; }
 
 function _gResizeCv() {
     var vp=document.getElementById('game-viewport'), cv=document.getElementById('game-canvas');
     if(!vp||!cv) return;
-    var w=vp.offsetWidth; cv.width=w; cv.height=Math.round(w/2);
+    var fs=document.fullscreenElement||document.webkitFullscreenElement;
+    if(fs){
+        var ctrls=document.getElementById('game-controls');
+        var availH=window.innerHeight-(ctrls?ctrls.offsetHeight:0)-70;
+        var availW=window.innerWidth-40;
+        var w=Math.max(200, Math.min(availW, availH*2)), h=w/2;
+        cv.width=Math.round(w); cv.height=Math.round(h);
+        cv.style.width=Math.round(w)+'px'; cv.style.height=Math.round(h)+'px';
+    } else {
+        cv.style.width=''; cv.style.height='';
+        var w2=vp.offsetWidth; cv.width=w2; cv.height=Math.round(w2/2);
+    }
+}
+
+// Canvas size can change on resize / fullscreen — rescale ball positions to match (uniform 2:1 scale)
+function _gOnResize() {
+    var cv=document.getElementById('game-canvas'); if(!cv) return;
+    if(!_gS){ _gResizeCv(); return; }
+    var oldW=cv.width; _gResizeCv();
+    var s=cv.width/oldW;
+    if(s>0 && Math.abs(s-1)>0.001){
+        _gS.balls.forEach(function(b){ b.x*=s; b.y*=s; b.vx*=s; b.vy*=s; b.r*=s; });
+    }
+    _gS.geom=_gGeom(cv);
 }
 
 function newGame() {
     _gResizeCv();
     var cv=document.getElementById('game-canvas'); if(!cv) return;
-    var g=_gGeom(cv), setup=_gMakeBalls(g);
-    _gS={ balls:setup.balls, cue:setup.cue, geom:g, state:'aiming',
-          target:1, shots:0, drag:null, hitTarget:false, pocketedNow:[] };
+    var g=_gGeom(cv), setup=_gMakeBalls(g, _gMode);
+    _gS={ balls:setup.balls, cue:setup.cue, geom:g, mode:_gMode, state:'aiming',
+          target:(_gMode==='9ball'?1:null), shots:0, drag:null, hitTarget:false, pocketedNow:[],
+          aimAngle:0, power:0.5, english:{x:0,y:0}, cueSpin:{x:0,y:0}, spinUsed:false };
     var msg=document.getElementById('game-message');
     if(msg) msg.classList.remove('show');
-    _gHUD();
+    _gSyncPowerUI(); _gDrawEnglish(); _gHUD();
     if(!_gRafId) _gLoop();
 }
 
 function _gLoop() {
     if(!_gS){_gRafId=null;return;}
     _gRafId=requestAnimationFrame(_gLoop);
-    _gUpdate(); _gDraw();
+    _gPollPad(); _gUpdate(); _gDraw();
 }
 
 function _gBindEvents() {
     if(_gEvented) return; _gEvented=true;
     var cv=document.getElementById('game-canvas');
     function startDrag(cx,cy){ if(!_gS||_gS.state!=='aiming')return; _gS.drag={sx:cx,sy:cy,cx:cx,cy:cy}; }
-    function moveDrag(cx,cy){ if(!_gS||!_gS.drag)return; _gS.drag.cx=cx; _gS.drag.cy=cy; _gPowerBar(); }
-    function endDrag(){ if(!_gS||!_gS.drag)return; _gFire(); }
+    function moveDrag(cx,cy){ if(!_gS||!_gS.drag)return; _gS.drag.cx=cx; _gS.drag.cy=cy; _gUpdateAimFromDrag(); }
+    function endDrag(){ if(!_gS||!_gS.drag)return; var d=_gS.drag, len=Math.hypot(d.cx-d.sx,d.cy-d.sy); _gS.drag=null; if(len>=5) _gShoot(); }
     cv.addEventListener('mousedown',function(e){var r=cv.getBoundingClientRect();startDrag(e.clientX-r.left,e.clientY-r.top);});
     cv.addEventListener('mousemove',function(e){var r=cv.getBoundingClientRect();moveDrag(e.clientX-r.left,e.clientY-r.top);});
     cv.addEventListener('mouseup',endDrag);
     cv.addEventListener('touchstart',function(e){e.preventDefault();var r=cv.getBoundingClientRect(),t=e.changedTouches[0];startDrag(t.clientX-r.left,t.clientY-r.top);},{passive:false});
     cv.addEventListener('touchmove',function(e){e.preventDefault();var r=cv.getBoundingClientRect(),t=e.changedTouches[0];moveDrag(t.clientX-r.left,t.clientY-r.top);},{passive:false});
     cv.addEventListener('touchend',function(e){e.preventDefault();endDrag();},{passive:false});
-    window.addEventListener('resize',function(){ if(_gS){_gResizeCv();var cv2=document.getElementById('game-canvas');if(cv2)_gS.geom=_gGeom(cv2);} });
+    window.addEventListener('resize',_gOnResize);
+    document.addEventListener('fullscreenchange',_gOnResize);
+    document.addEventListener('webkitfullscreenchange',_gOnResize);
+    window.addEventListener('gamepadconnected',function(){ showToast('🎮 Controller connected','gold'); });
 }
 
-function _gPowerBar() {
-    if(!_gS||!_gS.drag)return;
-    var dx=_gS.drag.cx-_gS.drag.sx, dy=_gS.drag.cy-_gS.drag.sy;
-    var pct=Math.min(Math.sqrt(dx*dx+dy*dy),_GDRAG)/_GDRAG*100;
-    var bar=document.getElementById('game-power-bar');
-    if(bar) bar.style.width=pct+'%';
+function _gUpdateAimFromDrag() {
+    var d=_gS.drag; if(!d)return;
+    var dx=d.cx-d.sx, dy=d.cy-d.sy, len=Math.hypot(dx,dy);
+    if(len>4){ _gS.aimAngle=Math.atan2(dy,dx); _gS.power=Math.min(len,_GDRAG)/_GDRAG; _gSyncPowerUI(); }
 }
 
-function _gFire() {
-    if(!_gS||!_gS.drag||_gS.state!=='aiming')return;
-    var dx=_gS.drag.cx-_gS.drag.sx, dy=_gS.drag.cy-_gS.drag.sy;
-    var len=Math.sqrt(dx*dx+dy*dy);
-    if(len<5){_gS.drag=null;return;}
-    var pow=Math.min(len,_GDRAG)/_GDRAG*_GPOW;
-    _gS.cue.vx=dx/len*pow; _gS.cue.vy=dy/len*pow;
+function _gSyncPowerUI() {
+    var r=document.getElementById('game-power-range'), p=document.getElementById('game-power-pct');
+    var pct=Math.round((_gS?_gS.power:0)*100);
+    if(r) r.value=pct;
+    if(p) p.textContent=pct+'%';
+}
+
+function _gSetPowerPct(v) {
+    if(!_gS) return;
+    _gS.power=Math.max(0,Math.min(1,v/100));
+    var p=document.getElementById('game-power-pct'); if(p) p.textContent=Math.round(_gS.power*100)+'%';
+}
+
+// Single fire path — used by drag-release, the Shoot button, and the gamepad
+function _gShoot() {
+    if(!_gS||_gS.state!=='aiming')return;
+    if(_gS.power<=0.02){ showToast('Add some power first.','info'); return; }
+    var pow=_gS.power*_GPOW;
+    _gS.cue.vx=Math.cos(_gS.aimAngle)*pow; _gS.cue.vy=Math.sin(_gS.aimAngle)*pow;
+    _gS.cue.spin=_gS.english.x;
+    _gS.cueSpin={x:_gS.english.x,y:_gS.english.y}; _gS.spinUsed=false;
     _gS.state='shooting'; _gS.shots++; _gS.hitTarget=false; _gS.pocketedNow=[];
     _gS.drag=null;
-    var bar=document.getElementById('game-power-bar'); if(bar) bar.style.width='0%';
     _gHUD();
 }
 
@@ -1636,10 +1738,16 @@ function _gUpdate() {
         // Rail bounce (with pocket gap — skip bounce near pocket)
         var nearPocket=g.pockets.some(function(p){return Math.hypot(b.x-p.x,b.y-p.y)<g.pR*1.8;});
         if(!nearPocket){
-            if(b.x-b.r<g.L){b.x=g.L+b.r;b.vx=Math.abs(b.vx)*0.78;}
-            if(b.x+b.r>g.R){b.x=g.R-b.r;b.vx=-Math.abs(b.vx)*0.78;}
-            if(b.y-b.r<g.T){b.y=g.T+b.r;b.vy=Math.abs(b.vy)*0.78;}
-            if(b.y+b.r>g.B){b.y=g.B-b.r;b.vy=-Math.abs(b.vy)*0.78;}
+            var bounced='';
+            if(b.x-b.r<g.L){b.x=g.L+b.r;b.vx=Math.abs(b.vx)*0.78;bounced='v';}
+            if(b.x+b.r>g.R){b.x=g.R-b.r;b.vx=-Math.abs(b.vx)*0.78;bounced='v';}
+            if(b.y-b.r<g.T){b.y=g.T+b.r;b.vy=Math.abs(b.vy)*0.78;bounced='h';}
+            if(b.y+b.r>g.B){b.y=g.B-b.r;b.vy=-Math.abs(b.vy)*0.78;bounced='h';}
+            // Side English "throw" off the rail
+            if(bounced && b.num===0 && Math.abs(b.spin)>0.05){
+                if(bounced==='v') b.vy+=b.spin*1.4; else b.vx+=b.spin*1.4;
+                b.spin*=0.5;
+            }
         }
     });
     // Ball-ball collisions
@@ -1656,6 +1764,15 @@ function _gUpdate() {
                 if(dv>0){a.vx-=dv*nx;a.vy-=dv*ny;b.vx+=dv*nx;b.vy+=dv*ny;}
                 var ov=(minD-dist)*0.52;
                 a.x-=nx*ov;a.y-=ny*ov;b.x+=nx*ov;b.y+=ny*ov;
+                // English: follow/draw + side, applied once on first cue↔object contact
+                if((a.num===0||b.num===0) && !_gS.spinUsed){
+                    var cb=a.num===0?a:b;
+                    var ux=Math.cos(_gS.aimAngle), uy=Math.sin(_gS.aimAngle);
+                    var fd=-_gS.cueSpin.y;            // widget up = follow, down = draw
+                    cb.vx+=ux*fd*_GSPIN; cb.vy+=uy*fd*_GSPIN;
+                    cb.vx+=(-uy)*_gS.cueSpin.x*_GSPIN*0.6; cb.vy+=(ux)*_gS.cueSpin.x*_GSPIN*0.6;
+                    _gS.spinUsed=true;
+                }
             }
         }
     }
@@ -1676,40 +1793,159 @@ function _gEndTurn() {
         _gS.cue.pocketed=false;
         _gS.cue.x=_gS.geom.L+(_gS.geom.R-_gS.geom.L)*0.25;
         _gS.cue.y=(_gS.geom.T+_gS.geom.B)/2;
-        _gS.cue.vx=_gS.cue.vy=0;
+        _gS.cue.vx=_gS.cue.vy=0; _gS.cue.spin=0;
         showToast('Scratch! Cue ball reset to head string.','gold');
     }
-    // 9-ball pocketed after valid hit = win
-    var nine=_gS.balls.find(function(b){return b.num===9;});
-    if(nine&&nine.pocketed&&_gS.hitTarget){_gWin();return;}
-    // Update target
+    var mode=_gS.mode;
     var rem=_gS.balls.filter(function(b){return b.num>0&&!b.pocketed;});
-    if(!rem.length){_gWin();return;}
-    _gS.target=Math.min.apply(null,rem.map(function(b){return b.num;}));
-    _gS.state='aiming'; _gHUD();
+    if(mode==='9ball'){
+        var nine=_gS.balls.find(function(b){return b.num===9;});
+        if(nine&&nine.pocketed&&_gS.hitTarget){_gWin();return;}
+        if(!rem.length){_gWin();return;}
+        _gS.target=Math.min.apply(null,rem.map(function(b){return b.num;}));
+    } else if(mode==='8ball'){
+        var eight=_gS.balls.find(function(b){return b.num===8;});
+        if(eight&&eight.pocketed){
+            var othersLeft=rem.filter(function(b){return b.num!==8;}).length;
+            if(othersLeft===0) _gWin(); else _gLose('8-ball sunk too early');
+            return;
+        }
+        _gS.target=rem.length;
+    } else if(mode==='3ball'){
+        if(!rem.length){_gWin();return;}
+        _gS.target=rem.length;
+    } else { // practice
+        if(!rem.length){ showToast('Table cleared — re-racking.','success'); newGame(); return; }
+        _gS.target=rem.length;
+    }
+    _gS.state='aiming'; _gS.english={x:0,y:0}; _gDrawEnglish(); _gHUD();
+}
+
+function _gMsg(title,sub){
+    var msg=document.getElementById('game-message'),t=document.getElementById('game-msg-title'),s=document.getElementById('game-msg-sub');
+    if(t) t.textContent=title; if(s) s.textContent=sub; if(msg) msg.classList.add('show');
 }
 
 function _gWin() {
     _gS.state='won';
-    var s=_gS.shots, prev=userProfile.stats.poolBest;
-    var newBest=(!prev||s<prev);
-    if(newBest){userProfile.stats.poolBest=s;saveProfile();}
-    var msg=document.getElementById('game-message');
-    var ttl=document.getElementById('game-msg-title');
-    var sub=document.getElementById('game-msg-sub');
-    if(ttl) ttl.textContent='You Win!';
-    if(sub) sub.textContent=s+' shots'+(newBest?' — New personal best!':prev===s?' — Tied your best!':' — Best: '+prev+' shots');
-    if(msg) msg.classList.add('show');
+    var s=_gS.shots, mode=_gS.mode, sub;
+    if(mode!=='practice'){
+        if(!userProfile.stats.poolBests) userProfile.stats.poolBests={};
+        var prev=userProfile.stats.poolBests[mode];
+        var newBest=(!prev||s<prev);
+        if(newBest){ userProfile.stats.poolBests[mode]=s; saveProfile(); }
+        sub=s+' shots'+(newBest?' — New best!':(prev===s?' — Tied your best!':' — Best: '+prev+' shots'));
+    } else { sub=s+' shots'; }
+    _gMsg('You Win!',sub);
+    _gHUD();
+}
+
+function _gLose(reason) {
+    _gS.state='lost';
+    _gMsg('Game Over', reason);
     _gHUD();
 }
 
 function _gHUD() {
     if(!_gS)return;
     var t=document.getElementById('game-target'),sh=document.getElementById('game-shots'),be=document.getElementById('game-best');
-    if(t) t.textContent=_gS.state==='won'?'★':_gS.target;
+    if(t) t.textContent=(_gS.state==='won')?'★':(_gS.state==='lost')?'✗':(_gS.target==null?'–':_gS.target);
     if(sh) sh.textContent=_gS.shots;
-    var best=userProfile.stats.poolBest;
+    var bests=userProfile.stats.poolBests||{};
+    var best=(_gS.mode==='practice')?null:bests[_gS.mode];
     if(be) be.textContent=best?best:'--';
+}
+
+function setGameMode(m, el) {
+    _gMode=m;
+    document.querySelectorAll('#game-modes .pill').forEach(function(p){ p.classList.remove('active'); });
+    if(el) el.classList.add('active');
+    var titles={'9ball':'9-Ball Pool','8ball':'8-Ball Pool','3ball':'3-Ball Sprint','practice':'Free Practice'};
+    var t=document.getElementById('game-title'); if(t) t.textContent=titles[m]||'Pool';
+    _gUpdateHowto(m);
+    newGame();
+}
+
+function _gUpdateHowto(m) {
+    var el=document.getElementById('game-howto'); if(!el)return;
+    var txt={
+        '9ball':'<b style="color:var(--gold2)">9-Ball</b> — Always strike the <b>lowest</b> numbered ball first. Pocket the 9 (even on a legal combo) to win. Goal: fewest shots.',
+        '8ball':'<b style="color:var(--gold2)">8-Ball</b> — Pocket any of balls 1–15 in any order, then sink the <b>8-ball last</b>. Sink the 8 early and the game is over.',
+        '3ball':'<b style="color:var(--gold2)">3-Ball</b> — A quick sprint: pocket balls 1, 2 &amp; 3 in as few shots as possible. Great for warming up.',
+        'practice':'<b style="color:var(--gold2)">Free Practice</b> — No win or loss. A full rack to drill your aim, English and position play. Table re-racks when cleared.'
+    };
+    el.innerHTML=txt[m]||'';
+}
+
+// ── English (spin) widget ──
+function _gEnglishInit() {
+    var c=document.getElementById('game-english'); if(!c)return;
+    if(!_gEngEvented){
+        _gEngEvented=true;
+        function setEng(clientX,clientY){
+            var r=c.getBoundingClientRect();
+            var cx=r.width/2, cy=r.height/2, rad=r.width/2-4;
+            var nx=(clientX-r.left-cx)/rad, ny=(clientY-r.top-cy)/rad, m=Math.hypot(nx,ny);
+            if(m>1){nx/=m;ny/=m;}
+            if(_gS) _gS.english={x:nx,y:ny};
+            _gDrawEnglish();
+        }
+        c.addEventListener('mousedown',function(e){_gEngDrag=true;setEng(e.clientX,e.clientY);});
+        c.addEventListener('mousemove',function(e){if(_gEngDrag)setEng(e.clientX,e.clientY);});
+        window.addEventListener('mouseup',function(){_gEngDrag=false;});
+        c.addEventListener('touchstart',function(e){e.preventDefault();var t=e.changedTouches[0];setEng(t.clientX,t.clientY);},{passive:false});
+        c.addEventListener('touchmove',function(e){e.preventDefault();var t=e.changedTouches[0];setEng(t.clientX,t.clientY);},{passive:false});
+    }
+    _gDrawEnglish();
+}
+
+function _gDrawEnglish() {
+    var c=document.getElementById('game-english'); if(!c)return;
+    var ctx=c.getContext('2d'), w=c.width, h=c.height, cx=w/2, cy=h/2, R=w/2-3;
+    ctx.clearRect(0,0,w,h);
+    var grd=ctx.createRadialGradient(cx-R*0.3,cy-R*0.3,R*0.2,cx,cy,R);
+    grd.addColorStop(0,'#ffffff'); grd.addColorStop(1,'#c8c0ac');
+    ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2);ctx.fillStyle=grd;ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(cx-R,cy);ctx.lineTo(cx+R,cy);ctx.moveTo(cx,cy-R);ctx.lineTo(cx,cy+R);ctx.stroke();
+    var e=_gS?_gS.english:{x:0,y:0};
+    var dx=cx+e.x*(R-5), dy=cy+e.y*(R-5);
+    ctx.beginPath();ctx.arc(dx,dy,5,0,Math.PI*2);ctx.fillStyle='#c0392b';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+}
+
+// ── Fullscreen ──
+function _gFullscreen() {
+    var stage=document.getElementById('game-stage'); if(!stage)return;
+    var fsEl=document.fullscreenElement||document.webkitFullscreenElement;
+    if(!fsEl){
+        var req=stage.requestFullscreen||stage.webkitRequestFullscreen;
+        if(req) req.call(stage); else showToast('Fullscreen not supported here.','info');
+    } else {
+        var exit=document.exitFullscreen||document.webkitExitFullscreen;
+        if(exit) exit.call(document);
+    }
+}
+
+// ── Gamepad — polled each frame while aiming ──
+function _gPollPad() {
+    if(!_gS||_gS.state!=='aiming'||!navigator.getGamepads)return;
+    var pads=navigator.getGamepads(), gp=null;
+    for(var i=0;i<pads.length;i++){ if(pads[i]){gp=pads[i];break;} }
+    if(!gp)return;
+    var ax=gp.axes, b=gp.buttons;
+    if(ax.length>=2 && Math.hypot(ax[0],ax[1])>0.25) _gS.aimAngle=Math.atan2(ax[1],ax[0]);
+    if(ax.length>=4 && Math.hypot(ax[2],ax[3])>0.18){
+        _gS.english={x:Math.max(-1,Math.min(1,ax[2])),y:Math.max(-1,Math.min(1,ax[3]))}; _gDrawEnglish();
+    }
+    function pressed(i){ return !!(b[i]&&b[i].pressed); }
+    function edge(i){ var p=pressed(i), was=_gPadPrev[i]; _gPadPrev[i]=p; return p&&!was; }
+    if(b[7]){ var rt=b[7].value||0; if(rt>0.05){ _gS.power=rt; _gSyncPowerUI(); } }
+    if(edge(5)){ _gS.power=Math.min(1,_gS.power+0.1); _gSyncPowerUI(); }
+    if(edge(4)){ _gS.power=Math.max(0,_gS.power-0.1); _gSyncPowerUI(); }
+    if(edge(0)) _gShoot();        // A
+    if(edge(3)) _gFullscreen();   // Y
+    if(edge(9)) newGame();        // Start
 }
 
 function _gDraw() {
@@ -1735,34 +1971,31 @@ function _gDraw() {
         ctx.fillStyle='#000';ctx.fill();
         ctx.strokeStyle='rgba(80,40,0,0.8)';ctx.lineWidth=2;ctx.stroke();
     });
-    // Aim line + cue stick
-    if(_gS.state==='aiming'&&_gS.drag){
-        var d=_gS.drag, dx=d.cx-d.sx, dy=d.cy-d.sy, len=Math.sqrt(dx*dx+dy*dy);
-        if(len>4){
-            var nx=dx/len, ny=dy/len, cue=_gS.cue;
-            // Wall clip
-            var big=W+H;
-            var tx=nx>0.001?(g.R-cue.r-cue.x)/nx:nx<-0.001?(g.L+cue.r-cue.x)/nx:big;
-            var ty=ny>0.001?(g.B-cue.r-cue.y)/ny:ny<-0.001?(g.T+cue.r-cue.y)/ny:big;
-            var t=Math.min(tx>0?tx:big, ty>0?ty:big, big);
-            ctx.save();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.setLineDash([5,6]);
-            ctx.beginPath();ctx.moveTo(cue.x,cue.y);ctx.lineTo(cue.x+nx*t,cue.y+ny*t);ctx.stroke();ctx.setLineDash([]);ctx.restore();
-            // Cue stick
-            var pow=Math.min(len,_GDRAG)/_GDRAG;
-            var gap=cue.r+4+pow*16;
-            ctx.save();ctx.strokeStyle='rgba(180,110,30,0.85)';ctx.lineWidth=4;ctx.lineCap='round';
-            ctx.beginPath();ctx.moveTo(cue.x-nx*gap,cue.y-ny*gap);ctx.lineTo(cue.x-nx*(gap+65),cue.y-ny*(gap+65));ctx.stroke();
-            ctx.strokeStyle='rgba(240,200,100,0.5)';ctx.lineWidth=2;
-            ctx.beginPath();ctx.moveTo(cue.x-nx*(gap+65),cue.y-ny*(gap+65));ctx.lineTo(cue.x-nx*(gap+90),cue.y-ny*(gap+90));ctx.stroke();
-            ctx.restore();
-        }
+    // Aim line + cue stick — driven by aimAngle/power (drag, slider, or gamepad)
+    if(_gS.state==='aiming' && !_gS.cue.pocketed){
+        var nx=Math.cos(_gS.aimAngle), ny=Math.sin(_gS.aimAngle), cue=_gS.cue;
+        // Wall clip
+        var big=W+H;
+        var tx=nx>0.001?(g.R-cue.r-cue.x)/nx:nx<-0.001?(g.L+cue.r-cue.x)/nx:big;
+        var ty=ny>0.001?(g.B-cue.r-cue.y)/ny:ny<-0.001?(g.T+cue.r-cue.y)/ny:big;
+        var t=Math.min(tx>0?tx:big, ty>0?ty:big, big);
+        ctx.save();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;ctx.setLineDash([5,6]);
+        ctx.beginPath();ctx.moveTo(cue.x,cue.y);ctx.lineTo(cue.x+nx*t,cue.y+ny*t);ctx.stroke();ctx.setLineDash([]);ctx.restore();
+        // Cue stick (pulled back proportional to power)
+        var pow=_gS.power;
+        var gap=cue.r+4+pow*16;
+        ctx.save();ctx.strokeStyle='rgba(180,110,30,0.85)';ctx.lineWidth=4;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(cue.x-nx*gap,cue.y-ny*gap);ctx.lineTo(cue.x-nx*(gap+65),cue.y-ny*(gap+65));ctx.stroke();
+        ctx.strokeStyle='rgba(240,200,100,0.5)';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(cue.x-nx*(gap+65),cue.y-ny*(gap+65));ctx.lineTo(cue.x-nx*(gap+90),cue.y-ny*(gap+90));ctx.stroke();
+        ctx.restore();
     }
     // Balls
     _gS.balls.forEach(function(b){
         if(b.pocketed)return;
         var col=_gColor(b.num);
         ctx.save();
-        if(b.num===9){
+        if(_gStriped(b.num)){
             // Stripe ball
             ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fillStyle='#f0e8d0';ctx.fill();
             ctx.save();ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.clip();
@@ -1783,8 +2016,8 @@ function _gDraw() {
             ctx.textAlign='center';ctx.textBaseline='middle';
             ctx.fillText(b.num,b.x,b.y);
         }
-        // Target ring
-        if(b.num===_gS.target&&_gS.state==='aiming'){
+        // Target ring (lowest ball — 9-Ball only)
+        if(_gS.mode==='9ball'&&b.num===_gS.target&&_gS.state==='aiming'){
             ctx.beginPath();ctx.arc(b.x,b.y,b.r+3.5,0,Math.PI*2);
             ctx.strokeStyle='rgba(240,192,64,0.85)';ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
         }
@@ -1829,6 +2062,7 @@ function initAnalyzer() {
         _aListened = true;
     }
     _setAStep(0);
+    _syncAIBtn('0.4');
 }
 
 function _resizeACanvas() {
@@ -1843,10 +2077,17 @@ function _onATap(e) {
     if (_aStep >= 3) return;
     var cv = document.getElementById('analyzer-canvas');
     var rect = e._rect || cv.getBoundingClientRect();
-    _aPts[_aStep] = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    if (!rect.width || !rect.height) return;
+    // Store as normalized ratios so markers stay correct after rotate/resize
+    _aPts[_aStep] = { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height };
     _aStep++;
     _setAStep(_aStep);
     if (_aStep >= 3) _showAResult();
+}
+
+function _aPx(pt) {
+    var cv = document.getElementById('analyzer-canvas');
+    return { x: pt.x * cv.width, y: pt.y * cv.height };
 }
 
 function _setAStep(s) {
@@ -1872,10 +2113,11 @@ function _drawAFrame() {
     var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
     var R = Math.max(14, W * 0.03);
-    if (_aPts[0]) _drawBall(ctx, _aPts[0], '#ffffff', R);
-    if (_aPts[1]) _drawBall(ctx, _aPts[1], '#d4a017', R);
-    if (_aPts[2]) _drawPocket(ctx, _aPts[2]);
-    if (_aPts[0] && _aPts[1] && _aPts[2]) _drawPaths(ctx, _aPts[0], _aPts[1], _aPts[2], R, W, H);
+    var p0 = _aPts[0] && _aPx(_aPts[0]), p1 = _aPts[1] && _aPx(_aPts[1]), p2 = _aPts[2] && _aPx(_aPts[2]);
+    if (p0) _drawBall(ctx, p0, '#ffffff', R);
+    if (p1) _drawBall(ctx, p1, '#d4a017', R);
+    if (p2) _drawPocket(ctx, p2);
+    if (p0 && p1 && p2) _drawPaths(ctx, p0, p1, p2, R, W, H);
 }
 
 function _drawBall(ctx, p, color, R) {
@@ -1952,9 +2194,10 @@ function _arrow(ctx, x1, y1, x2, y2, color, lw, dash) {
 }
 
 function _showAResult() {
-    var p = _aPts, info = document.getElementById('analyzer-info'), stats = document.getElementById('analyzer-stats');
+    var info = document.getElementById('analyzer-info'), stats = document.getElementById('analyzer-stats');
     var diff = document.getElementById('analyzer-difficulty');
-    if (!info || !p[0] || !p[1] || !p[2]) return;
+    if (!info || !_aPts[0] || !_aPts[1] || !_aPts[2]) return;
+    var p = [_aPx(_aPts[0]), _aPx(_aPts[1]), _aPx(_aPts[2])];
 
     // Cut angle between cue→obj line and obj→pocket line
     var ang1 = Math.atan2(p[1].y-p[0].y, p[1].x-p[0].x);
@@ -1986,9 +2229,15 @@ function _showAResult() {
     _aLastResult = { cut: cut, difficulty: difficulty.toFixed(1), shotType: shotType, diffLabel: diffLabel };
     if (diff) { diff.style.display='block'; diff.textContent=diffLabel+' · '+difficulty.toFixed(1)+'/10'; diff.style.color=diffColor; }
     info.style.display='block';
-    var aiBtn = document.getElementById('btn-ai-analysis');
-    if (aiBtn) { aiBtn.style.opacity = AI_PROXY_URL ? '1' : '0.55'; }
+    _syncAIBtn(AI_PROXY_URL ? '1' : '0.55');
     _aiReset();
+}
+
+function _syncAIBtn(opacity) {
+    var b = document.getElementById('btn-ai-analysis');
+    if (!b) return;
+    b.innerHTML = AI_PROXY_URL ? '&#129504; AI Analysis' : '&#129504; AI Setup Needed';
+    b.style.opacity = AI_PROXY_URL ? opacity : '0.55';
 }
 
 function resetAnalyzer() {
@@ -1997,8 +2246,7 @@ function resetAnalyzer() {
     var info=document.getElementById('analyzer-info'), diff=document.getElementById('analyzer-difficulty');
     if (info) info.style.display='none';
     if (diff) diff.style.display='none';
-    var aiBtn=document.getElementById('btn-ai-analysis');
-    if (aiBtn) aiBtn.style.opacity='0.4';
+    _syncAIBtn('0.4');
     _aiReset();
 }
 
