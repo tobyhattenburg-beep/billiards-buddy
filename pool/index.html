@@ -123,6 +123,38 @@ select,.btn{font-family:inherit;}
   #spin-col{order:3; flex-direction:row; width:auto; gap:10px;}
   #topbar h1{font-size:20px;}
 }
+
+/* Level + XP bar */
+#levelbar{display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:7px 14px; backdrop-filter:blur(8px);}
+#lvl-badge{font-family:'Orbitron',sans-serif; font-weight:800; font-size:13px; color:#031018; background:linear-gradient(135deg,var(--cyan),#1b9fd0); padding:5px 11px; border-radius:8px; box-shadow:0 0 14px rgba(54,230,255,0.5); letter-spacing:1px; white-space:nowrap;}
+#xp-track{flex:1; height:10px; border-radius:6px; background:rgba(0,0,0,0.45); border:1px solid var(--border); overflow:hidden;}
+#xp-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--cyan),var(--gold)); box-shadow:0 0 12px rgba(54,230,255,0.6); transition:width .35s ease;}
+#xp-text{font-size:12px; color:var(--dim); letter-spacing:1px; min-width:92px; text-align:right; white-space:nowrap;}
+
+/* Cue rack modal */
+#cues-modal{position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; background:rgba(3,5,12,0.86); backdrop-filter:blur(6px); padding:18px;}
+#cues-panel{background:#0a0f1c; border:1px solid var(--cyan-dim); border-radius:16px; padding:18px; max-width:780px; width:100%; max-height:88vh; overflow:auto; box-shadow:0 0 40px rgba(54,230,255,0.25);}
+#cues-panel h2{font-family:'Orbitron',sans-serif; margin:0; letter-spacing:2px; color:#fff; text-shadow:0 0 12px var(--cyan);}
+#cues-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:12px; margin-top:14px;}
+.cue-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; position:relative; transition:.15s;}
+.cue-card.owned{cursor:pointer;}
+.cue-card.owned:hover{border-color:var(--cyan); box-shadow:0 0 16px rgba(54,230,255,0.25);}
+.cue-card.equipped{border-color:var(--gold); box-shadow:0 0 18px rgba(255,210,74,0.35);}
+.cue-card.locked{opacity:0.45;}
+.cue-name{font-family:'Orbitron',sans-serif; font-size:14px; font-weight:600; margin-bottom:2px;}
+.cue-rod{height:9px; border-radius:5px; margin:7px 0 8px;}
+.cue-desc{font-size:12.5px; color:var(--dim); line-height:1.4; min-height:50px;}
+.cue-traits{display:flex; flex-direction:column; gap:5px; margin-top:8px;}
+.trait{display:flex; align-items:center; gap:7px; font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase;}
+.trait>span:first-child{width:42px;}
+.trait-bar{flex:1; height:6px; border-radius:4px; background:rgba(0,0,0,0.5); overflow:hidden;}
+.trait-bar>span{display:block; height:100%;}
+.cue-status{position:absolute; top:11px; right:12px; font-size:9px; letter-spacing:1px; text-transform:uppercase; font-weight:700;}
+.cue-status.eq{color:var(--gold);} .cue-status.lk{color:var(--dim);} .cue-status.ok{color:var(--cyan);}
+
+/* Unlock toast */
+#unlock-toast{position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:60; background:#0a0f1c; border:1px solid var(--gold); border-radius:12px; padding:12px 22px; box-shadow:0 0 30px rgba(255,210,74,0.55); font-family:'Orbitron',sans-serif; font-weight:700; letter-spacing:1px; color:var(--gold); text-align:center; animation:pop .25s ease-out;}
+#unlock-toast small{display:block; font-family:'Rajdhani',sans-serif; color:var(--ivory); font-weight:500; font-size:12.5px; margin-top:3px; letter-spacing:0;}
 </style>
 </head>
 <body>
@@ -135,6 +167,13 @@ select,.btn{font-family:inherit;}
       <button id="new-game" class="btn">New Game</button>
     </div>
   </header>
+
+  <div id="levelbar">
+    <span id="lvl-badge">Lv 1</span>
+    <div id="xp-track"><div id="xp-fill"></div></div>
+    <span id="xp-text">0 / 100 XP</span>
+    <button id="cues-btn" class="btn">🎱 Cues</button>
+  </div>
 
   <div id="scoreboard">
     <div class="score-side" id="score-you"><span class="score-name">You</span><span class="score-val" id="you-score">0</span></div>
@@ -170,6 +209,18 @@ select,.btn{font-family:inherit;}
   </main>
 
   <p id="hint">Move over the table to aim · drag the spin ball · pull the Power gauge down &amp; release to shoot.</p>
+
+  <div id="cues-modal" class="hidden">
+    <div id="cues-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>CUE&nbsp;RACK</h2>
+        <button id="cues-close" class="btn">Close</button>
+      </div>
+      <p style="color:var(--dim); font-size:13px; margin:6px 0 0;">Win new cues by leveling up — each plays differently. Tap an unlocked cue to equip it.</p>
+      <div id="cues-grid"></div>
+    </div>
+  </div>
+  <div id="unlock-toast" class="hidden"></div>
 </div>
 
 <script>
@@ -203,12 +254,66 @@ var G={cv:null,ctx:null,spinCv:null,spinCtx:null,W:0,H:0,geom:null,balls:[],cue:
  scores:{you:0,ai:0},pottedThisShot:[],scratch:false,firstHit:null,
  ai:CHARACTERS[1],raf:null,turnStart:0,slowWarned:false,pointer:{x:0,y:0},bubbleTimer:null,sfxTime:0,t:0};
 
+// ---- Progression: levels + unlockable cues ----
+// traits: power (shot speed), spin (English strength), assist (1=arrow, 2=full path optics)
+var CUES=[
+ {id:'ash',      name:'Ash Classic',  unlock:1,  traits:{power:1.00,spin:1.00,assist:1}, shaft:'#d9b271', glow:'rgba(217,178,113,0.6)', desc:'Balanced all-rounder. No frills, no weaknesses — a fine first cue.'},
+ {id:'viper',    name:'Neon Viper',   unlock:2,  traits:{power:0.95,spin:1.30,assist:1}, shaft:'#39e08a', glow:'rgba(57,224,138,0.85)', desc:'Whippy shaft loads heavy English — masters draw, follow & swerve.'},
+ {id:'sledge',   name:'Sledgehammer', unlock:3,  traits:{power:1.25,spin:0.80,assist:1}, shaft:'#ff5a5a', glow:'rgba(255,90,90,0.85)', desc:'Brutal break power for long pots — but fine spin is harder.'},
+ {id:'laser',    name:'Laser Sight',  unlock:4,  traits:{power:1.00,spin:1.00,assist:2}, shaft:'#36e6ff', glow:'rgba(54,230,255,0.9)', desc:'Pro aiming optics — projects the full object-ball path to the rail.'},
+ {id:'gold',     name:'Gold Standard',unlock:6,  traits:{power:1.10,spin:1.15,assist:1}, shaft:'#ffd24a', glow:'rgba(255,210,74,0.9)', desc:'Tournament cue: a touch more power AND more spin. No downside.'},
+ {id:'phantom',  name:'The Phantom',  unlock:8,  traits:{power:1.05,spin:1.40,assist:2}, shaft:'#b06bff', glow:'rgba(176,107,255,0.9)', desc:'Eerie control — elite spin paired with full path optics.'},
+ {id:'excalibur',name:'Excalibur',    unlock:10, traits:{power:1.20,spin:1.25,assist:2}, shaft:'#ffffff', glow:'rgba(255,255,255,0.95)', desc:'The legendary cue. Power, spin and optics — mastery itself.'}
+];
+function loadPlayer(){ try{ var s=JSON.parse(localStorage.getItem('cueSharks_v1')); if(s&&s.unlocked&&s.unlocked.length) return s; }catch(e){} return {xp:0,level:1,cue:'ash',unlocked:['ash']}; }
+var PLAYER=loadPlayer();
+function savePlayer(){ try{ localStorage.setItem('cueSharks_v1',JSON.stringify(PLAYER)); }catch(e){} }
+function curCue(){ for(var i=0;i<CUES.length;i++){ if(CUES[i].id===PLAYER.cue) return CUES[i]; } return CUES[0]; }
+function levelInfo(xp){ var lvl=1,need=100,acc=0; while(xp>=acc+need){ acc+=need; lvl++; need=100+(lvl-1)*60; } return {level:lvl,into:xp-acc,need:need}; }
+function addXp(n){ if(n<=0)return; var before=levelInfo(PLAYER.xp).level; PLAYER.xp+=n; var info=levelInfo(PLAYER.xp); PLAYER.level=info.level;
+  if(info.level>before) checkUnlocks(before,info.level); savePlayer(); renderLevel(); }
+function checkUnlocks(from,to){ CUES.forEach(function(c){ if(c.unlock>from && c.unlock<=to && PLAYER.unlocked.indexOf(c.id)<0){ PLAYER.unlocked.push(c.id); showUnlock(c); } }); }
+function renderLevel(){ var info=levelInfo(PLAYER.xp);
+  var lb=document.getElementById('lvl-badge'); if(lb) lb.textContent='Lv '+info.level;
+  var xf=document.getElementById('xp-fill'); if(xf) xf.style.width=Math.round(info.into/info.need*100)+'%';
+  var xt=document.getElementById('xp-text'); if(xt) xt.textContent=info.into+' / '+info.need+' XP'; }
+function showUnlock(c){ var t=document.getElementById('unlock-toast'); if(!t)return;
+  t.innerHTML='🎉 NEW CUE UNLOCKED<small>'+c.name+' — '+c.desc+'</small>'; t.classList.remove('hidden');
+  clearTimeout(showUnlock._t); showUnlock._t=setTimeout(function(){ t.classList.add('hidden'); },5000); }
+function openCues(){ renderCues(); document.getElementById('cues-modal').classList.remove('hidden'); }
+function closeCues(){ document.getElementById('cues-modal').classList.add('hidden'); }
+function traitBar(label,val,color){ var pct=Math.max(8,Math.min(100,Math.round(val/1.4*100)));
+  return '<div class="trait"><span>'+label+'</span><div class="trait-bar"><span style="width:'+pct+'%;background:'+color+'"></span></div></div>'; }
+function renderCues(){
+  var grid=document.getElementById('cues-grid'); if(!grid)return; grid.innerHTML='';
+  CUES.forEach(function(c){
+    var owned=PLAYER.unlocked.indexOf(c.id)>=0, eq=(PLAYER.cue===c.id);
+    var card=document.createElement('div');
+    card.className='cue-card '+(eq?'equipped':(owned?'owned':'locked'));
+    var status=eq?'<span class="cue-status eq">Equipped</span>':(owned?'<span class="cue-status ok">Tap to equip</span>':'<span class="cue-status lk">Lv '+c.unlock+'</span>');
+    card.innerHTML=status+
+      '<div class="cue-name">'+c.name+'</div>'+
+      '<div class="cue-rod" style="background:linear-gradient(90deg,#2a3550,'+c.shaft+');box-shadow:0 0 10px '+c.glow+'"></div>'+
+      '<div class="cue-desc">'+c.desc+'</div>'+
+      '<div class="cue-traits">'+traitBar('Power',c.traits.power,'var(--red)')+traitBar('Spin',c.traits.spin,'var(--green)')+traitBar('Optics',c.traits.assist/2,'var(--cyan)')+'</div>';
+    if(owned&&!eq) card.addEventListener('click',function(){ PLAYER.cue=c.id; savePlayer(); renderCues(); });
+    grid.appendChild(card);
+  });
+}
+function projectToRail(x,y,dx,dy,g){ var big=g.R+g.B+1000;
+  var tx=dx>0.001?(g.R-x)/dx:dx<-0.001?(g.L-x)/dx:big, ty=dy>0.001?(g.B-y)/dy:dy<-0.001?(g.T-y)/dy:big;
+  var t=Math.min(tx>0?tx:big,ty>0?ty:big,big); return {x:x+dx*t,y:y+dy*t}; }
+
 window.addEventListener('DOMContentLoaded',init);
 
 function init(){
   G.cv=document.getElementById('table'); G.ctx=G.cv.getContext('2d');
   G.spinCv=document.getElementById('spin'); G.spinCtx=G.spinCv.getContext('2d');
   buildOpponentSelect(); bindControls();
+  document.getElementById('cues-btn').addEventListener('click',openCues);
+  document.getElementById('cues-close').addEventListener('click',closeCues);
+  document.getElementById('cues-modal').addEventListener('click',function(e){ if(e.target.id==='cues-modal') closeCues(); });
+  renderLevel();
   window.addEventListener('resize',resize); resize(); newGame(); loop();
 }
 function buildOpponentSelect(){
@@ -229,9 +334,9 @@ function resize(){
   if(oldW&&G.balls.length){ var s=w/oldW; G.balls.forEach(function(b){ b.x*=s; b.y*=s; b.vx*=s; b.vy*=s; b.r=G.geom.bR; }); }
   drawSpin();
 }
-function maxV(){ return G.geom.bR*2.0; }
+function maxV(){ return G.geom.bR*2.0*curCue().traits.power; }
 function stopV(){ return G.geom.bR*0.02; }
-function spinForce(){ return maxV()*0.30; }
+function spinForce(){ return G.geom.bR*2.0*0.30*curCue().traits.spin; }
 
 // ---- Colors ----
 function ballColor(n){ var c=['#f3eedd','#ffd23a','#2b7bff','#ff4d4d','#b15bff','#ff9430','#22c55e','#9b2d2d','#15151c']; return n<=8?(c[n]||'#888'):(c[n-8]||'#888'); }
@@ -342,7 +447,7 @@ function endShot(){
   var g=G.geom;
   if(G.cue.potted){ G.cue.potted=false; G.cue.x=g.L+(g.R-g.L)*0.25; G.cue.y=(g.T+g.B)/2; G.cue.vx=G.cue.vy=0; G.cue.spin=0; G.scratch=true; }
   var shooter=G.turn, potted=G.pottedThisShot.filter(function(n){ return n>0; }).length;
-  if(potted>0){ G.scores[shooter]+=potted; updateScore(); }
+  if(potted>0){ G.scores[shooter]+=potted; updateScore(); if(shooter==='you') addXp(potted*12); }
   var remaining=G.balls.filter(function(b){ return b.n>0&&!b.potted; }).length;
   if(remaining===0) return gameOver();
   if(shooter==='you'){ if(G.scratch) aiSay('scratch'); else if(potted===0) aiSay('miss'); }
@@ -353,7 +458,9 @@ function endShot(){
   if(G.turn==='ai') scheduleAI();
 }
 function gameOver(){ G.state='over'; var youWin=G.scores.you>=G.scores.ai; aiSay(youWin?'lose':'win');
-  showMessage(youWin?'You Win! 🏆':G.ai.name+' Wins','Final — You '+G.scores.you+'  ·  '+G.ai.name+' '+G.scores.ai); }
+  var gained = youWin ? (60+Math.round(G.ai.difficulty*40)) : 20; addXp(gained);
+  showMessage(youWin?'You Win! 🏆':G.ai.name+' Wins',
+    'Final — You '+G.scores.you+'  ·  '+G.ai.name+' '+G.scores.ai+'   ·   +'+gained+' XP'); }
 
 // ---- AI ----
 function scheduleAI(){ G.state='ai-think'; if(Math.random()<0.6) aiSay('think'); setTimeout(aiShoot,850+Math.random()*750); }
@@ -460,6 +567,10 @@ function drawAim(ctx,g){
     var px=-diry,py=dirx,apx=gx-cue.x,apy=gy-cue.y; if(apx*px+apy*py<0){ px=-px; py=-py; }
     ctx.shadowColor='rgba(255,61,240,0.8)'; ctx.strokeStyle='rgba(255,120,240,'+pulse.toFixed(3)+')'; ctx.lineWidth=1.3; ctx.setLineDash([5,5]);
     ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx+px*g.bR*3.2,gy+py*g.bR*3.2); ctx.stroke(); ctx.setLineDash([]);
+    // Optics trait: project the object-ball path all the way to the rail/pocket
+    if(curCue().traits.assist>=2){ var ep=projectToRail(hit.x,hit.y,dirx,diry,g);
+      ctx.shadowColor='rgba(255,224,120,0.7)'; ctx.strokeStyle='rgba(255,224,120,0.5)'; ctx.lineWidth=1.2; ctx.setLineDash([4,8]);
+      ctx.beginPath(); ctx.moveTo(hit.x+dirx*g.bR*5,hit.y+diry*g.bR*5); ctx.lineTo(ep.x,ep.y); ctx.stroke(); ctx.setLineDash([]); }
   }
   ctx.restore();
 }
@@ -495,12 +606,13 @@ function drawBall(ctx,b){
 function drawCue(ctx,g){
   var cue=G.cue,fx=Math.cos(G.aim),fy=Math.sin(G.aim),gap=cue.r+5+G.drawPull*g.bR*5;
   var x1=cue.x-fx*gap,y1=cue.y-fy*gap,x2=x1-fx*(g.bR*16),y2=y1-fy*(g.bR*16),xm=(x1+x2)/2,ym=(y1+y2)/2;
+  var cc=curCue();
   ctx.save(); ctx.lineCap='round';
-  ctx.shadowColor='rgba(0,0,0,0.5)'; ctx.shadowBlur=6;
-  ctx.strokeStyle='#d9b271'; ctx.lineWidth=Math.max(3,g.bR*0.38); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(xm,ym); ctx.stroke();
-  ctx.strokeStyle='#2a3550'; ctx.lineWidth=Math.max(3,g.bR*0.46); ctx.beginPath(); ctx.moveTo(xm,ym); ctx.lineTo(x2,y2); ctx.stroke();
-  // glowing tip
-  ctx.shadowColor='rgba(54,230,255,0.8)'; ctx.shadowBlur=10; ctx.fillStyle='#bfeaff'; ctx.beginPath(); ctx.arc(x1,y1,Math.max(1.6,g.bR*0.13),0,7); ctx.fill();
+  ctx.shadowColor=cc.glow; ctx.shadowBlur=8;
+  ctx.strokeStyle=cc.shaft; ctx.lineWidth=Math.max(3,g.bR*0.38); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(xm,ym); ctx.stroke();
+  ctx.shadowBlur=0; ctx.strokeStyle='#2a3550'; ctx.lineWidth=Math.max(3,g.bR*0.46); ctx.beginPath(); ctx.moveTo(xm,ym); ctx.lineTo(x2,y2); ctx.stroke();
+  // glowing tip (cue color)
+  ctx.shadowColor=cc.glow; ctx.shadowBlur=12; ctx.fillStyle=cc.shaft; ctx.beginPath(); ctx.arc(x1,y1,Math.max(1.6,g.bR*0.14),0,7); ctx.fill();
   ctx.restore();
 }
 
