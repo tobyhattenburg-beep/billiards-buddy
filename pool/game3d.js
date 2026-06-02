@@ -34,10 +34,25 @@ var CUES=[
  {id:'excalibur',name:'Excalibur',unlock:10,traits:{power:1.2,spin:1.25,assist:2},shaft:'#ffffff',glow:'rgba(255,255,255,0.95)',desc:'The legendary cue.'}
 ];
 
-// ---- Venues (career swaps these) ----
+// ---- Venues (career swaps the 3D environment) ----
 var VENUES={
- penthouse:{felt:0x0c2b52, rail:0x2a1a0e, light:0xfff2d6, bg:0x06080e, bokeh:[0x36e6ff,0xff3df0,0xffd24a,0xffffff]}
+ basement:{name:'The Basement', felt:0x0b5a2a, rail:0x3a2410, light:0xffe6bc, bg:0x0a0c08, bokeh:[0xffd24a,0x8a6b2e,0xc89a3a], amb:0.34, exp:1.0},
+ lounge:{name:'Neon Lounge', felt:0x0c2b52, rail:0x2a1a0e, light:0xfff2d6, bg:0x06080e, bokeh:[0x36e6ff,0xff3df0,0xffd24a,0xffffff], amb:0.28, exp:1.05},
+ velvet:{name:'The Velvet Room', felt:0x5a1530, rail:0x4a3208, light:0xffd9b0, bg:0x140509, bokeh:[0xff5a7a,0xffd24a,0xff9e3d], amb:0.30, exp:1.05},
+ arena:{name:'Tournament Arena', felt:0x10407a, rail:0x1c1c20, light:0xffffff, bg:0x080a12, bokeh:[0xffffff,0x9fd0ff,0xffe0a0], amb:0.5, exp:1.12},
+ skyline:{name:'Sky Lounge', felt:0x123048, rail:0x1a1a22, light:0xcfe0ff, bg:0x05070f, bokeh:[0x36e6ff,0xffffff,0xff9e3d], amb:0.30, exp:1.05},
+ vault:{name:'The Vault', felt:0x1c1407, rail:0x0a0a0a, light:0xffd24a, bg:0x080604, bokeh:[0xffd24a,0xffffff,0xc8a83a], amb:0.24, exp:1.12}
 };
+// ---- Career ladder ----
+var CAREER=[
+ {venue:'basement', opponents:['rookie','tank'],  reward:200},
+ {venue:'lounge',   opponents:['lola','vegas'],   reward:400},
+ {venue:'velvet',   opponents:['doc','duchess'],  reward:750},
+ {venue:'arena',    opponents:['shark','zen'],    reward:1300},
+ {venue:'skyline',  opponents:['nova','ghost'],   reward:2200},
+ {venue:'vault',    opponents:['champ'],          reward:5000}
+];
+function charById(id){ for(var i=0;i<CHARACTERS.length;i++) if(CHARACTERS[i].id===id) return CHARACTERS[i]; return CHARACTERS[0]; }
 
 // ---- State ----
 var R3={renderer:null,scene:null,camera:null,env:null,balls:[],cue:null,ghost:null,aimLine:null,lights:{},pool:null};
@@ -47,7 +62,8 @@ var CAM={mode:'aim',az:Math.PI*0.5,el:0.62,dist:5.4,cinem:0};
 var PLAYER=loadPlayer();
 
 window.addEventListener('DOMContentLoaded', boot);
-function boot(){ initThree(); bindUI(); renderLevel(); newGame(); loop(); }
+function boot(){ initThree(); bindUI(); renderLevel(); newGame(); loop();
+  if(location.hash==='#career') setTimeout(openCareer,400); }
 
 // ============================================================
 //  THREE scene
@@ -66,7 +82,7 @@ function initThree(){
   R3.env=makeEnv();
   sc.environment=R3.env;
   buildBokeh(); buildLamp(); buildLights(); buildTable(); buildCue(); buildAimAids();
-  applyVenue('penthouse');
+  applyVenue('lounge');
   window.addEventListener('resize',onResize);
 }
 function onResize(){ if(!R3.renderer)return; R3.renderer.setSize(vw(),vh(),false); R3.camera.aspect=vw()/vh(); R3.camera.updateProjectionMatrix(); }
@@ -103,8 +119,8 @@ function buildLights(){
   var rim=new THREE.DirectionalLight(0x5577ff,0.18); rim.position.set(-4,3,-5); R3.scene.add(rim);
   R3.lights={amb:amb,spots:spots,rim:rim};
 }
-function clothMat(){ return new THREE.MeshStandardMaterial({color:VENUES[R3.venue||'penthouse'].felt,roughness:0.96,metalness:0.0,envMap:R3.env,envMapIntensity:0.10}); }
-function woodMat(){ return new THREE.MeshStandardMaterial({color:VENUES[R3.venue||'penthouse'].rail,roughness:0.35,metalness:0.25,envMap:R3.env,envMapIntensity:0.7}); }
+function clothMat(){ return new THREE.MeshStandardMaterial({color:VENUES[R3.venue||'lounge'].felt,roughness:0.96,metalness:0.0,envMap:R3.env,envMapIntensity:0.10}); }
+function woodMat(){ return new THREE.MeshStandardMaterial({color:VENUES[R3.venue||'lounge'].rail,roughness:0.35,metalness:0.25,envMap:R3.env,envMapIntensity:0.7}); }
 function buildTable(){
   var grp=new THREE.Group();
   var shape=new THREE.Shape(); shape.moveTo(-HX,-HZ); shape.lineTo(HX,-HZ); shape.lineTo(HX,HZ); shape.lineTo(-HX,HZ); shape.lineTo(-HX,-HZ);
@@ -142,13 +158,16 @@ function buildAimAids(){
   var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(12),3));
   var line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0x9fefff,transparent:true,opacity:0.6})); line.visible=false; R3.scene.add(line); R3.aimLine=line;
 }
-function applyVenue(name){ R3.venue=name; var v=VENUES[name]||VENUES.penthouse;
+function applyVenue(name){ R3.venue=name; var v=VENUES[name]||VENUES.lounge;
   R3.scene.background=new THREE.Color(v.bg);
+  if(R3.scene.fog) R3.scene.fog.color.setHex(v.bg);
   if(R3.bed) R3.bed.material.color.setHex(v.felt);
   if(R3.cushions) R3.cushions.forEach(function(m){ m.material.color.setHex(v.felt); });
   if(R3.body) R3.body.material.color.setHex(v.rail);
   if(R3.railMeshes) R3.railMeshes.forEach(function(m){ m.material.color.setHex(v.rail); });
-  if(R3.lights) R3.lights.spots.forEach(function(s){ s.color.setHex(v.light); });
+  if(R3.lights){ R3.lights.spots.forEach(function(s){ s.color.setHex(v.light); }); R3.lights.amb.intensity=v.amb||0.3; }
+  if(R3.renderer) R3.renderer.toneMappingExposure=v.exp||1.05;
+  if(R3.bokeh){ var cols=v.bokeh||[0xffffff]; R3.bokeh.children.forEach(function(s,i){ s.material.color.setHex(cols[i%cols.length]); }); }
 }
 
 // ---- ball meshes ----
@@ -234,7 +253,20 @@ function endShot(){
 }
 function gameOver(){ G.state='over'; var win=G.scores.you>=G.scores.ai; say(win?'lose':'win');
   var xp= win?(60+Math.round(G.ai.difficulty*40)):20; addXp(xp);
-  showMsg(win?'You Win! 🏆':G.ai.name+' Wins','You '+G.scores.you+' · '+G.ai.name+' '+G.scores.ai+'   +'+xp+' XP'); }
+  if(G.careerMode){
+    var cash=80+Math.round(G.ai.difficulty*220);
+    if(win){ PLAYER.career.beaten[G.ai.id]=true; PLAYER.career.cash+=cash;
+      var st=CAREER[G.careerStage], done=st&&st.opponents.every(function(o){return PLAYER.career.beaten[o];});
+      if(done&&!PLAYER.career.done[st.venue]){ PLAYER.career.done[st.venue]=true; PLAYER.career.cash+=st.reward;
+        var nxt=CAREER[G.careerStage+1]; venueToast(st, nxt?VENUES[nxt.venue].name:null); }
+      savePlayer(); updateCash(); }
+    showMsg(win?'Match Won! 🏆':G.ai.name+' Wins',
+      'You '+G.scores.you+' · '+G.ai.name+' '+G.scores.ai+(win?('   +$'+cash+' · +'+xp+' XP'):('   +'+xp+' XP')),
+      win?'Career Map':'Rematch', win?openCareer:newGame);
+  } else {
+    showMsg(win?'You Win! 🏆':G.ai.name+' Wins','You '+G.scores.you+' · '+G.ai.name+' '+G.scores.ai+'   +'+xp+' XP','Play Again',newGame);
+  }
+}
 
 // ---- AI ----
 function aiTurn(){ if(G.turn!=='ai'||G.state!=='aiming')return; if(Math.random()<0.6) say('think');
@@ -326,15 +358,22 @@ function bindUI(){
 
   document.getElementById('view-btn').addEventListener('click',function(){ CAM.mode=(CAM.mode==='aim')?'orbit':'aim'; this.textContent=(CAM.mode==='aim')?'👁 Orbit':'🎯 Aim'; });
   document.getElementById('new-btn').addEventListener('click',newGame);
-  document.getElementById('msg-btn').addEventListener('click',newGame);
+  document.getElementById('msg-btn').addEventListener('click',function(){ (G._msgCb||newGame)(); });
   document.getElementById('cues-btn').addEventListener('click',openCues);
   document.getElementById('cues-close').addEventListener('click',closeCues);
   document.getElementById('cues-modal').addEventListener('click',function(e){ if(e.target.id==='cues-modal') closeCues(); });
+  document.getElementById('career-btn').addEventListener('click',openCareer);
+  document.getElementById('career-close').addEventListener('click',closeCareer);
+  document.getElementById('career-modal').addEventListener('click',function(e){ if(e.target.id==='career-modal') closeCareer(); });
+  updateCash();
 }
 function setPower(t){ document.getElementById('power-fill').style.height=Math.round(t*100)+'%'; document.getElementById('power-pct').textContent=Math.round(t*100)+'%'; }
 function setTurn(){ var el=document.getElementById('turn'); if(G.turn==='you'){ el.textContent='Your Shot'; el.classList.remove('ai'); } else { el.textContent=G.ai.name; el.classList.add('ai'); } }
 function updateScore(){ document.getElementById('you-sc').textContent=G.scores.you; document.getElementById('ai-sc').textContent=G.scores.ai; document.getElementById('ai-nm').textContent=G.ai.name; }
-function showMsg(t,s){ document.getElementById('msg-title').textContent=t; document.getElementById('msg-sub').textContent=s; document.getElementById('message').classList.remove('hidden'); }
+function showMsg(t,s,btn,cb){ document.getElementById('msg-title').textContent=t; document.getElementById('msg-sub').textContent=s;
+  var b=document.getElementById('msg-btn'); b.textContent=btn||'Play Again'; G._msgCb=cb||newGame;
+  document.getElementById('message').classList.remove('hidden'); }
+function updateCash(){ var el=document.getElementById('cash'); if(el) el.textContent='$'+PLAYER.career.cash; }
 function hideMsg(){ document.getElementById('message').classList.add('hidden'); }
 function say(cat){ var pool=G.ai.taunts[cat]; if(!pool||!pool.length)return; showBubble(pool[Math.floor(Math.random()*pool.length)]); }
 function showBubble(t){ var b=document.getElementById('ai-bubble'); b.textContent=G.ai.avatar+' '+t; b.classList.remove('hidden'); clearTimeout(G.bubbleT); G.bubbleT=setTimeout(hideBubble,3000); }
@@ -348,7 +387,10 @@ function drawSpinDial(){ var c=document.getElementById('spin'),x=c.getContext('2
 }
 
 // ---- progression ----
-function loadPlayer(){ try{ var s=JSON.parse(localStorage.getItem('cueSharks3d')); if(s&&s.unlocked&&s.unlocked.length) return s; }catch(e){} return {xp:0,level:1,cue:'ash',unlocked:['ash']}; }
+function loadPlayer(){ var p; try{ p=JSON.parse(localStorage.getItem('cueSharks3d')); }catch(e){}
+  if(!p||!p.unlocked||!p.unlocked.length) p={xp:0,level:1,cue:'ash',unlocked:['ash']};
+  if(!p.career) p.career={beaten:{},cash:0,done:{}};
+  return p; }
 function savePlayer(){ try{ localStorage.setItem('cueSharks3d',JSON.stringify(PLAYER)); }catch(e){} }
 function levelInfo(xp){ var lvl=1,need=100,acc=0; while(xp>=acc+need){ acc+=need; lvl++; need=100+(lvl-1)*60; } return {level:lvl,into:xp-acc,need:need}; }
 function addXp(n){ if(n<=0)return; var before=levelInfo(PLAYER.xp).level; PLAYER.xp+=n; var info=levelInfo(PLAYER.xp); PLAYER.level=info.level;
@@ -368,6 +410,30 @@ function renderCues(){ var grid=document.getElementById('cues-grid'); grid.inner
       '<div class="cue-desc">'+c.desc+'</div>'+tbar('Power',c.traits.power,'var(--red)')+tbar('Spin',c.traits.spin,'var(--green)')+tbar('Optics',c.traits.assist/2,'var(--cyan)');
     if(owned&&!eq) card.addEventListener('click',function(){ PLAYER.cue=c.id; savePlayer(); renderCues(); });
     grid.appendChild(card); });
+}
+
+// ---- career ----
+function stageUnlocked(i){ if(i===0)return true; return CAREER[i-1].opponents.every(function(o){return PLAYER.career.beaten[o];}); }
+function openCareer(){ renderCareer(); document.getElementById('career-modal').classList.remove('hidden'); }
+function closeCareer(){ document.getElementById('career-modal').classList.add('hidden'); }
+function careerMatch(oppId, idx){ G.ai=charById(oppId); G.careerMode=true; G.careerStage=idx; applyVenue(CAREER[idx].venue); closeCareer(); newGame(); }
+function venueToast(st, nextName){ var t=document.getElementById('unlock-toast');
+  t.innerHTML='🏆 VENUE CLEARED<small>'+VENUES[st.venue].name+' — +$'+st.reward+(nextName?(' · '+nextName+' unlocked'):'')+'</small>';
+  t.classList.remove('hidden'); clearTimeout(venueToast._t); venueToast._t=setTimeout(function(){ t.classList.add('hidden'); },5500); }
+function renderCareer(){
+  var wrap=document.getElementById('career-body'); wrap.innerHTML='';
+  document.getElementById('career-cash').textContent='$'+PLAYER.career.cash;
+  CAREER.forEach(function(st,i){ var unlocked=stageUnlocked(i), v=VENUES[st.venue];
+    var opps=st.opponents.map(function(o){ var c=charById(o), beaten=PLAYER.career.beaten[o], cls=beaten?'beaten':(unlocked?'play':'lock');
+      return '<div class="opp '+cls+'" data-opp="'+o+'" data-stage="'+i+'"><div class="opp-av">'+c.avatar+'</div><div class="opp-nm">'+c.name+'</div>'+
+             '<div class="opp-st">'+(beaten?'✓ Beaten · replay':(unlocked?('Play · diff '+Math.round(c.difficulty*100)):'🔒 Locked'))+'</div></div>'; }).join('');
+    var sec=document.createElement('div'); sec.className='venue-sec'+(unlocked?'':' vlocked');
+    sec.innerHTML='<div class="venue-h"><span class="venue-nm">'+(i+1)+'. '+v.name+'</span><span class="venue-rw">'+(unlocked?('Clear bonus $'+st.reward):'🔒 Locked')+'</span></div><div class="opp-row">'+opps+'</div>';
+    wrap.appendChild(sec);
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll('.opp.play, .opp.beaten'), function(el){
+    el.addEventListener('click', function(){ careerMatch(el.getAttribute('data-opp'), +el.getAttribute('data-stage')); });
+  });
 }
 
 // ---- loop ----

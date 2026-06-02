@@ -53,7 +53,7 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
 #msg-title{font-family:'Orbitron'; font-size:32px; font-weight:800; color:#fff; text-shadow:0 0 18px var(--cyan);}
 #msg-sub{font-size:16px; color:var(--ivory);}
 
-#cues-modal{position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(3,5,12,0.88); backdrop-filter:blur(6px); padding:18px;}
+#cues-modal,#career-modal{position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(4,6,12,0.95); backdrop-filter:blur(7px); padding:18px;}
 #cues-panel{background:#0a0f1c; border:1px solid var(--cyan-dim); border-radius:16px; padding:18px; max-width:780px; width:100%; max-height:88vh; overflow:auto; box-shadow:0 0 40px rgba(54,230,255,0.25);}
 #cues-panel h2{font-family:'Orbitron'; margin:0; letter-spacing:2px; color:#fff;}
 #cues-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:12px; margin-top:14px;}
@@ -70,6 +70,21 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
 .cue-status.eq{color:var(--gold);} .cue-status.ok{color:var(--cyan);} .cue-status.lk{color:var(--dim);}
 #unlock-toast{position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:12; background:#0a0f1c; border:1px solid var(--gold); border-radius:12px; padding:11px 20px; box-shadow:0 0 28px rgba(255,210,74,0.5); font-family:'Orbitron'; font-weight:700; color:var(--gold); text-align:center;}
 #unlock-toast small{display:block; font-family:'Rajdhani'; color:var(--ivory); font-weight:500; font-size:12px; margin-top:3px;}
+#cash-chip{font-family:'Orbitron'; font-weight:700; font-size:12px; color:var(--gold); background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:7px 12px; backdrop-filter:blur(8px);}
+#career-panel{background:#0a0f1c; border:1px solid var(--cyan-dim); border-radius:16px; padding:18px; max-width:840px; width:100%; max-height:88vh; overflow:auto; box-shadow:0 0 40px rgba(54,230,255,0.25);}
+#career-panel h2{font-family:'Orbitron'; margin:0; letter-spacing:2px; color:#fff;}
+.venue-sec{margin-top:16px; border:1px solid var(--border); border-radius:12px; padding:12px; background:rgba(255,255,255,0.02);}
+.venue-sec.vlocked{opacity:0.5;}
+.venue-h{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+.venue-nm{font-family:'Orbitron'; font-size:15px; color:#fff;}
+.venue-rw{font-size:12px; color:var(--gold); letter-spacing:1px;}
+.opp-row{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px;}
+.opp{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:10px; text-align:center;}
+.opp.play{cursor:pointer; border-color:var(--cyan-dim);} .opp.play:hover{border-color:var(--cyan); box-shadow:0 0 14px rgba(54,230,255,0.25);}
+.opp.beaten{cursor:pointer; border-color:rgba(57,224,138,0.4);}
+.opp.lock{opacity:0.5;}
+.opp-av{font-size:30px;} .opp-nm{font-size:13px; font-weight:600; margin:4px 0;} .opp-st{font-size:10px; color:var(--dim); letter-spacing:1px; text-transform:uppercase;}
+.opp.beaten .opp-st{color:var(--green);}
 .hidden{display:none !important;}
 @media (max-width:640px){ #power-gauge{height:170px;} #spin{width:60px;height:60px;} #xp-track{width:90px;} #topbar .sc{font-size:20px;} }
 </style>
@@ -97,6 +112,7 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
 
   <div class="hud" id="topright">
     <button class="btn" id="view-btn">👁 Orbit</button>
+    <button class="btn" id="career-btn">🏆 Career</button>
     <button class="btn" id="cues-btn">🎱 Cues</button>
     <button class="btn" id="new-btn">↻ New</button>
     <div id="ai-bubble" class="hidden"></div>
@@ -104,6 +120,7 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
 
   <div class="hud" id="botbar">
     <div id="levelbar"><span id="lvl">Lv 1</span><div id="xp-track"><div id="xp-fill"></div></div><span id="xp-text">0/100</span></div>
+    <div id="cash-chip"><span id="cash">$0</span></div>
   </div>
 
   <div class="hud" id="hint">Drag the table to aim · drag the Spin ball · pull the Power gauge &amp; release to shoot · 👁 to orbit.</div>
@@ -114,6 +131,15 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
     <div style="display:flex;justify-content:space-between;align-items:center;"><h2>CUE&nbsp;RACK</h2><button class="btn" id="cues-close">Close</button></div>
     <p style="color:var(--dim);font-size:13px;margin:6px 0 0;">Win cues by leveling up. Each plays differently — tap an unlocked cue to equip.</p>
     <div id="cues-grid"></div>
+  </div></div>
+
+  <div id="career-modal" class="hidden"><div id="career-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2>CAREER</h2>
+      <div style="display:flex;align-items:center;gap:12px;"><span id="career-cash" style="font-family:'Orbitron';color:var(--gold);font-weight:700;">$0</span><button class="btn" id="career-close">Close</button></div>
+    </div>
+    <p style="color:var(--dim);font-size:13px;margin:6px 0 0;">Beat every shark in a venue to unlock the next. Win cash &amp; XP — replay anyone to farm cash.</p>
+    <div id="career-body"></div>
   </div></div>
 
   <div id="unlock-toast" class="hidden"></div>
