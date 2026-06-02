@@ -3,641 +3,122 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Cue Sharks — Neon Pool</title>
+<title>Cue Sharks — 3D Pool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
-:root{
-  --cyan:#36e6ff; --cyan-dim:#1a7f93;
-  --magenta:#ff3df0; --gold:#ffd24a; --red:#ff5a5a; --green:#39e08a;
-  --felt:#11192e; --felt2:#0b1120; --rail:#0a0f1c; --rail2:#060912;
-  --bg:#05070f; --panel:rgba(14,20,38,0.72); --ivory:#eaf2ff; --dim:#6f80a6; --border:#1d2a4a;
-}
+:root{ --cyan:#36e6ff; --cyan-dim:#1a7f93; --magenta:#ff3df0; --gold:#ffd24a; --red:#ff5a5a; --green:#39e08a;
+  --bg:#05070f; --panel:rgba(10,16,30,0.72); --ivory:#eaf2ff; --dim:#7f8fb0; --border:#1d2a4a; }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none;}
-html,body{margin:0; height:100%;}
-body{
-  background:
-    radial-gradient(circle at 50% -10%, #16213f 0%, var(--bg) 55%, #02030a 100%);
-  color:var(--ivory); font-family:'Rajdhani', system-ui, sans-serif; overflow-x:hidden;
-}
-#app{max-width:1040px; margin:0 auto; padding:10px 12px 26px; display:flex; flex-direction:column; gap:12px;}
+html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-family:'Rajdhani',system-ui,sans-serif; overflow:hidden;}
+#stage{position:fixed; inset:0;}
+#gl{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none;}
 
-/* Header */
-#topbar{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;}
-#topbar h1{
-  margin:0; font-family:'Orbitron',sans-serif; font-size:24px; font-weight:800; letter-spacing:3px;
-  color:#fff; text-shadow:0 0 8px var(--cyan), 0 0 22px rgba(54,230,255,0.6);
-}
-.top-controls{display:flex; align-items:center; gap:10px;}
-.sel-wrap{font-size:12px; letter-spacing:2px; color:var(--dim); display:flex; align-items:center; gap:6px; text-transform:uppercase;}
-select,.btn{font-family:inherit;}
-#opponent-select{
-  background:rgba(8,12,24,0.8); color:var(--ivory); border:1px solid var(--border);
-  border-radius:8px; padding:7px 9px; font-size:14px; font-weight:600;
-}
-.btn{
-  background:rgba(54,230,255,0.06); color:var(--cyan); border:1px solid var(--cyan-dim);
-  border-radius:9px; padding:8px 18px; font-size:14px; font-weight:700; letter-spacing:1px; cursor:pointer;
-  text-transform:uppercase; transition:.15s; box-shadow:0 0 0 rgba(54,230,255,0);
-}
-.btn:hover{background:rgba(54,230,255,0.16); box-shadow:0 0 16px rgba(54,230,255,0.35);}
-.btn-gold{color:#1a1205; background:linear-gradient(135deg,var(--gold),#ffe79a); border:none; box-shadow:0 0 18px rgba(255,210,74,0.5);}
+/* HUD overlay */
+.hud{position:absolute; z-index:5;}
+#topbar{top:10px; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:8px 16px; backdrop-filter:blur(8px); white-space:nowrap;}
+#topbar .nm{font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--dim);}
+#topbar .sc{font-family:'Orbitron'; font-size:24px; font-weight:800; color:#fff; text-shadow:0 0 12px rgba(54,230,255,0.5);}
+#ai-sc{color:#fff; text-shadow:0 0 12px rgba(255,61,240,0.5);}
+#turn{font-family:'Orbitron'; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:var(--cyan); padding:5px 12px; border:1px solid rgba(54,230,255,0.3); border-radius:18px; background:rgba(54,230,255,0.08);}
+#turn.ai{color:var(--magenta); border-color:rgba(255,61,240,0.3); background:rgba(255,61,240,0.08);}
 
-/* Scoreboard */
-#scoreboard{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:9px 16px;
-  backdrop-filter:blur(8px); box-shadow:inset 0 0 24px rgba(54,230,255,0.05);
-}
-.score-side{display:flex; flex-direction:column; align-items:center; min-width:96px;}
-.score-name{font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--dim);}
-.score-val{font-family:'Orbitron',sans-serif; font-size:30px; font-weight:800; color:#fff; line-height:1.1; text-shadow:0 0 12px rgba(54,230,255,0.55);}
-#score-ai .score-val{text-shadow:0 0 12px rgba(255,61,240,0.55);}
-#turn-indicator{
-  flex:1; text-align:center; font-size:14px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
-  color:var(--cyan); background:rgba(54,230,255,0.08); border:1px solid rgba(54,230,255,0.3);
-  border-radius:22px; padding:7px 10px; text-shadow:0 0 10px rgba(54,230,255,0.5);
-}
-#turn-indicator.ai{color:var(--magenta); background:rgba(255,61,240,0.08); border-color:rgba(255,61,240,0.35); text-shadow:0 0 10px rgba(255,61,240,0.5);}
+#leftbar{top:50%; left:14px; transform:translateY(-50%); display:flex; flex-direction:column; align-items:center; gap:8px;}
+.lbl{font-size:9px; letter-spacing:2px; color:var(--dim); text-transform:uppercase;}
+#power-gauge{position:relative; width:34px; height:230px; border-radius:18px; cursor:ns-resize; touch-action:none; background:linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0.45)); border:1px solid var(--border); overflow:hidden; box-shadow:inset 0 0 18px rgba(0,0,0,0.6);}
+#power-fill{position:absolute; left:0; right:0; bottom:0; height:0%; background:linear-gradient(0deg,var(--green),var(--gold) 55%,var(--red)); box-shadow:0 0 18px rgba(255,210,74,0.6);}
+#power-pct{font-family:'Orbitron'; color:var(--gold); font-weight:700; font-size:12px;}
 
-/* Game area */
-#game-area{display:flex; align-items:stretch; gap:12px;}
-.ctrl-label{font-size:10px; letter-spacing:3px; color:var(--dim); text-transform:uppercase;}
+#rightbar{bottom:16px; right:14px; display:flex; flex-direction:column; align-items:center; gap:8px;}
+#spin{width:74px; height:74px; border-radius:50%; cursor:pointer; touch-action:none; box-shadow:0 0 20px rgba(54,230,255,0.25);}
 
-/* Premium power gauge (custom, draggable) */
-#power-col{display:flex; flex-direction:column; align-items:center; gap:8px; width:64px; flex:0 0 auto;}
-#power-gauge{
-  position:relative; width:34px; flex:1; min-height:220px; border-radius:18px; cursor:ns-resize; touch-action:none;
-  background:linear-gradient(180deg, rgba(255,255,255,0.04), rgba(0,0,0,0.4));
-  border:1px solid var(--border); overflow:hidden; box-shadow:inset 0 0 18px rgba(0,0,0,0.6);
-}
-#power-fill{
-  position:absolute; left:0; right:0; bottom:0; height:0%;
-  background:linear-gradient(0deg, var(--green), var(--gold) 55%, var(--red));
-  box-shadow:0 0 18px rgba(255,210,74,0.6); transition:height .04s linear;
-}
-#power-gauge::after{ content:''; position:absolute; inset:0; border-radius:18px; pointer-events:none;
-  background:linear-gradient(90deg, rgba(255,255,255,0.18), transparent 40%); }
-#power-pct{font-family:'Orbitron',sans-serif; color:var(--gold); font-weight:700; font-size:13px; text-shadow:0 0 10px rgba(255,210,74,0.5);}
+#topright{top:12px; right:12px; display:flex; flex-direction:column; align-items:flex-end; gap:8px;}
+.btn{background:rgba(54,230,255,0.07); color:var(--cyan); border:1px solid var(--cyan-dim); border-radius:9px; padding:7px 14px; font-family:'Rajdhani'; font-size:13px; font-weight:700; letter-spacing:1px; text-transform:uppercase; cursor:pointer;}
+.btn:hover{background:rgba(54,230,255,0.16);}
+.btn-gold{color:#1a1205; background:linear-gradient(135deg,var(--gold),#ffe79a); border:none;}
+#ai-bubble{max-width:230px; background:rgba(10,16,30,0.95); color:var(--ivory); border:1px solid var(--magenta); border-radius:12px; padding:8px 12px; font-size:13px; font-weight:600; box-shadow:0 0 18px rgba(255,61,240,0.35); animation:pop .18s;}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
 
-/* Table */
-#table-wrap{position:relative; flex:1; min-width:0; align-self:flex-start;}
-#table{display:block; width:100%; height:auto; border-radius:14px; touch-action:none;}
+#botbar{bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:10px; align-items:center;}
+#levelbar{display:flex; align-items:center; gap:10px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:6px 12px; backdrop-filter:blur(8px);}
+#lvl{font-family:'Orbitron'; font-weight:800; font-size:12px; color:#031018; background:linear-gradient(135deg,var(--cyan),#1b9fd0); padding:4px 9px; border-radius:7px; letter-spacing:1px;}
+#xp-track{width:140px; height:9px; border-radius:6px; background:rgba(0,0,0,0.5); border:1px solid var(--border); overflow:hidden;}
+#xp-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--cyan),var(--gold)); box-shadow:0 0 10px rgba(54,230,255,0.6); transition:width .35s;}
+#xp-text{font-size:11px; color:var(--dim); min-width:78px; text-align:right;}
 
-/* AI avatar + bubble */
-#ai-corner{position:absolute; top:10px; right:10px; display:flex; flex-direction:column; align-items:flex-end; gap:7px; pointer-events:none;}
-#ai-avatar{
-  width:48px; height:48px; border-radius:50%; background:rgba(8,12,24,0.9);
-  border:2px solid var(--magenta); display:flex; align-items:center; justify-content:center; font-size:27px;
-  box-shadow:0 0 18px rgba(255,61,240,0.5);
-}
-#ai-bubble{
-  max-width:230px; background:rgba(10,16,30,0.94); color:var(--ivory); border:1px solid var(--magenta);
-  border-radius:12px; padding:9px 13px; font-size:14px; font-weight:600; line-height:1.35;
-  box-shadow:0 0 20px rgba(255,61,240,0.35); position:relative; animation:pop .18s ease-out;
-}
-#ai-bubble::after{content:''; position:absolute; right:16px; bottom:-7px; border:7px solid transparent; border-top-color:var(--magenta); border-bottom:0;}
-@keyframes pop{from{transform:scale(.8);opacity:0;} to{transform:scale(1);opacity:1;}}
+#hint{bottom:54px; left:50%; transform:translateX(-50%); font-size:12px; color:var(--dim); text-align:center; width:90%; pointer-events:none;}
 
-/* Spin sphere */
-#spin-col{display:flex; flex-direction:column; align-items:center; gap:8px; width:84px; flex:0 0 auto; justify-content:center;}
-#spin{width:72px; height:72px; border-radius:50%; cursor:pointer; touch-action:none; box-shadow:0 0 20px rgba(54,230,255,0.25);}
-.mini-btn{background:rgba(54,230,255,0.06); color:var(--cyan); border:1px solid var(--cyan-dim); border-radius:7px; padding:4px 9px; font-size:10px; letter-spacing:1px; cursor:pointer; text-transform:uppercase;}
+#message{position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; background:rgba(4,6,12,0.82); backdrop-filter:blur(5px); text-align:center; padding:20px;}
+#msg-title{font-family:'Orbitron'; font-size:32px; font-weight:800; color:#fff; text-shadow:0 0 18px var(--cyan);}
+#msg-sub{font-size:16px; color:var(--ivory);}
 
-/* Message overlay */
-#message{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
-  background:rgba(5,7,15,0.93); border-radius:14px; backdrop-filter:blur(5px); text-align:center; padding:22px;}
-#message-title{font-family:'Orbitron',sans-serif; font-size:30px; font-weight:800; color:#fff; text-shadow:0 0 18px var(--cyan);}
-#message-sub{font-size:16px; color:var(--ivory); max-width:340px; line-height:1.5;}
-
-#hint{text-align:center; font-size:13px; letter-spacing:.5px; color:var(--dim); margin:2px 0 0;}
-.hidden{display:none !important;}
-
-@media (max-width:640px){
-  #game-area{flex-wrap:wrap;}
-  #table-wrap{order:1; flex:1 0 100%;}
-  #power-col{order:2; flex-direction:row; width:auto; flex:1; gap:10px;}
-  #power-gauge{min-height:0; height:34px; flex:1;}
-  #power-fill{top:0; bottom:auto; left:0; height:100%; width:0%;
-    background:linear-gradient(90deg, var(--green), var(--gold) 55%, var(--red));}
-  #spin-col{order:3; flex-direction:row; width:auto; gap:10px;}
-  #topbar h1{font-size:20px;}
-}
-
-/* Level + XP bar */
-#levelbar{display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:7px 14px; backdrop-filter:blur(8px);}
-#lvl-badge{font-family:'Orbitron',sans-serif; font-weight:800; font-size:13px; color:#031018; background:linear-gradient(135deg,var(--cyan),#1b9fd0); padding:5px 11px; border-radius:8px; box-shadow:0 0 14px rgba(54,230,255,0.5); letter-spacing:1px; white-space:nowrap;}
-#xp-track{flex:1; height:10px; border-radius:6px; background:rgba(0,0,0,0.45); border:1px solid var(--border); overflow:hidden;}
-#xp-fill{height:100%; width:0%; background:linear-gradient(90deg,var(--cyan),var(--gold)); box-shadow:0 0 12px rgba(54,230,255,0.6); transition:width .35s ease;}
-#xp-text{font-size:12px; color:var(--dim); letter-spacing:1px; min-width:92px; text-align:right; white-space:nowrap;}
-
-/* Cue rack modal */
-#cues-modal{position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; background:rgba(3,5,12,0.86); backdrop-filter:blur(6px); padding:18px;}
+#cues-modal{position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(3,5,12,0.88); backdrop-filter:blur(6px); padding:18px;}
 #cues-panel{background:#0a0f1c; border:1px solid var(--cyan-dim); border-radius:16px; padding:18px; max-width:780px; width:100%; max-height:88vh; overflow:auto; box-shadow:0 0 40px rgba(54,230,255,0.25);}
-#cues-panel h2{font-family:'Orbitron',sans-serif; margin:0; letter-spacing:2px; color:#fff; text-shadow:0 0 12px var(--cyan);}
+#cues-panel h2{font-family:'Orbitron'; margin:0; letter-spacing:2px; color:#fff;}
 #cues-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:12px; margin-top:14px;}
-.cue-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; position:relative; transition:.15s;}
-.cue-card.owned{cursor:pointer;}
-.cue-card.owned:hover{border-color:var(--cyan); box-shadow:0 0 16px rgba(54,230,255,0.25);}
-.cue-card.equipped{border-color:var(--gold); box-shadow:0 0 18px rgba(255,210,74,0.35);}
+.cue-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; position:relative;}
+.cue-card.owned{cursor:pointer;} .cue-card.owned:hover{border-color:var(--cyan);}
+.cue-card.equipped{border-color:var(--gold); box-shadow:0 0 16px rgba(255,210,74,0.3);}
 .cue-card.locked{opacity:0.45;}
-.cue-name{font-family:'Orbitron',sans-serif; font-size:14px; font-weight:600; margin-bottom:2px;}
+.cue-name{font-family:'Orbitron'; font-size:14px; margin-bottom:2px;}
 .cue-rod{height:9px; border-radius:5px; margin:7px 0 8px;}
-.cue-desc{font-size:12.5px; color:var(--dim); line-height:1.4; min-height:50px;}
-.cue-traits{display:flex; flex-direction:column; gap:5px; margin-top:8px;}
-.trait{display:flex; align-items:center; gap:7px; font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase;}
-.trait>span:first-child{width:42px;}
-.trait-bar{flex:1; height:6px; border-radius:4px; background:rgba(0,0,0,0.5); overflow:hidden;}
-.trait-bar>span{display:block; height:100%;}
+.cue-desc{font-size:12px; color:var(--dim); line-height:1.4; min-height:48px;}
+.trait{display:flex; align-items:center; gap:7px; font-size:9px; letter-spacing:1px; color:var(--dim); text-transform:uppercase; margin-top:4px;}
+.trait>span:first-child{width:44px;} .trait-bar{flex:1; height:6px; border-radius:4px; background:rgba(0,0,0,0.5); overflow:hidden;} .trait-bar>span{display:block; height:100%;}
 .cue-status{position:absolute; top:11px; right:12px; font-size:9px; letter-spacing:1px; text-transform:uppercase; font-weight:700;}
-.cue-status.eq{color:var(--gold);} .cue-status.lk{color:var(--dim);} .cue-status.ok{color:var(--cyan);}
-
-/* Unlock toast */
-#unlock-toast{position:fixed; top:18px; left:50%; transform:translateX(-50%); z-index:60; background:#0a0f1c; border:1px solid var(--gold); border-radius:12px; padding:12px 22px; box-shadow:0 0 30px rgba(255,210,74,0.55); font-family:'Orbitron',sans-serif; font-weight:700; letter-spacing:1px; color:var(--gold); text-align:center; animation:pop .25s ease-out;}
-#unlock-toast small{display:block; font-family:'Rajdhani',sans-serif; color:var(--ivory); font-weight:500; font-size:12.5px; margin-top:3px; letter-spacing:0;}
+.cue-status.eq{color:var(--gold);} .cue-status.ok{color:var(--cyan);} .cue-status.lk{color:var(--dim);}
+#unlock-toast{position:absolute; top:16px; left:50%; transform:translateX(-50%); z-index:12; background:#0a0f1c; border:1px solid var(--gold); border-radius:12px; padding:11px 20px; box-shadow:0 0 28px rgba(255,210,74,0.5); font-family:'Orbitron'; font-weight:700; color:var(--gold); text-align:center;}
+#unlock-toast small{display:block; font-family:'Rajdhani'; color:var(--ivory); font-weight:500; font-size:12px; margin-top:3px;}
+.hidden{display:none !important;}
+@media (max-width:640px){ #power-gauge{height:170px;} #spin{width:60px;height:60px;} #xp-track{width:90px;} #topbar .sc{font-size:20px;} }
 </style>
 </head>
 <body>
-<div id="app">
+<div id="stage">
+  <canvas id="gl"></canvas>
 
-  <header id="topbar">
-    <h1>CUE&nbsp;SHARKS</h1>
-    <div class="top-controls">
-      <label class="sel-wrap">Opponent <select id="opponent-select"></select></label>
-      <button id="new-game" class="btn">New Game</button>
-    </div>
-  </header>
-
-  <div id="levelbar">
-    <span id="lvl-badge">Lv 1</span>
-    <div id="xp-track"><div id="xp-fill"></div></div>
-    <span id="xp-text">0 / 100 XP</span>
-    <button id="cues-btn" class="btn">🎱 Cues</button>
+  <div class="hud" id="topbar">
+    <div style="text-align:center"><div class="nm">You</div><div class="sc" id="you-sc">0</div></div>
+    <div id="turn">Your Shot</div>
+    <div style="text-align:center"><div class="nm" id="ai-nm">—</div><div class="sc" id="ai-sc">0</div></div>
   </div>
 
-  <div id="scoreboard">
-    <div class="score-side" id="score-you"><span class="score-name">You</span><span class="score-val" id="you-score">0</span></div>
-    <div id="turn-indicator">Your Break</div>
-    <div class="score-side" id="score-ai"><span class="score-name" id="ai-name">—</span><span class="score-val" id="ai-score">0</span></div>
+  <div class="hud" id="leftbar">
+    <span class="lbl">Power</span>
+    <div id="power-gauge"><div id="power-fill"></div></div>
+    <span id="power-pct">0%</span>
   </div>
 
-  <main id="game-area">
-    <div id="power-col">
-      <span class="ctrl-label">Power</span>
-      <div id="power-gauge"><div id="power-fill"></div></div>
-      <span id="power-pct">0%</span>
-    </div>
-
-    <div id="table-wrap">
-      <canvas id="table"></canvas>
-      <div id="ai-corner">
-        <div id="ai-bubble" class="hidden"></div>
-        <div id="ai-avatar">🦈</div>
-      </div>
-      <div id="message" class="hidden">
-        <div id="message-title"></div>
-        <div id="message-sub"></div>
-        <button id="message-btn" class="btn btn-gold">Play Again</button>
-      </div>
-    </div>
-
-    <div id="spin-col">
-      <span class="ctrl-label">Spin</span>
-      <canvas id="spin" width="100" height="100"></canvas>
-      <button id="spin-reset" class="mini-btn">Center</button>
-    </div>
-  </main>
-
-  <p id="hint">Move over the table to aim · drag the spin ball · pull the Power gauge down &amp; release to shoot.</p>
-
-  <div id="cues-modal" class="hidden">
-    <div id="cues-panel">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>CUE&nbsp;RACK</h2>
-        <button id="cues-close" class="btn">Close</button>
-      </div>
-      <p style="color:var(--dim); font-size:13px; margin:6px 0 0;">Win new cues by leveling up — each plays differently. Tap an unlocked cue to equip it.</p>
-      <div id="cues-grid"></div>
-    </div>
+  <div class="hud" id="rightbar">
+    <span class="lbl">Spin</span>
+    <canvas id="spin" width="100" height="100"></canvas>
   </div>
+
+  <div class="hud" id="topright">
+    <button class="btn" id="view-btn">👁 Orbit</button>
+    <button class="btn" id="cues-btn">🎱 Cues</button>
+    <button class="btn" id="new-btn">↻ New</button>
+    <div id="ai-bubble" class="hidden"></div>
+  </div>
+
+  <div class="hud" id="botbar">
+    <div id="levelbar"><span id="lvl">Lv 1</span><div id="xp-track"><div id="xp-fill"></div></div><span id="xp-text">0/100</span></div>
+  </div>
+
+  <div class="hud" id="hint">Drag the table to aim · drag the Spin ball · pull the Power gauge &amp; release to shoot · 👁 to orbit.</div>
+
+  <div id="message" class="hidden"><div id="msg-title"></div><div id="msg-sub"></div><button class="btn btn-gold" id="msg-btn">Play Again</button></div>
+
+  <div id="cues-modal" class="hidden"><div id="cues-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;"><h2>CUE&nbsp;RACK</h2><button class="btn" id="cues-close">Close</button></div>
+    <p style="color:var(--dim);font-size:13px;margin:6px 0 0;">Win cues by leveling up. Each plays differently — tap an unlocked cue to equip.</p>
+    <div id="cues-grid"></div>
+  </div></div>
+
   <div id="unlock-toast" class="hidden"></div>
 </div>
 
-<script>
-'use strict';
-// ============================================================
-//  Cue Sharks — Neon Pool (Hustle Kings-inspired)
-//  Physics · neon aiming · AI roster · audio hooks — single file
-// ============================================================
-
-// ---- Tunables ----
-var FR=0.985, REST_RAIL=0.86, REST_BALL=0.95;
-
-// ---- AI roster (10) ----
-var CHARACTERS=[
- {id:'rookie',name:'Ricky the Rookie',avatar:'🐣',difficulty:0.30,taunts:{think:["Uhh… this one?","Let me try…"],miss:["Phew, your turn.","Lucky escape."],scratch:["Ha! You scratched!","Saw that coming."],score:["Hey, I did it!","Beginner's luck!"],slow:["You napping?","Tick tock…"],win:["I—I won?!","No way!"],lose:["Aw, good game.","You're too good."]}},
- {id:'shark',name:'Sharkey Malone',avatar:'🦈',difficulty:0.62,taunts:{think:["Smell that? Fear.","Watch and learn."],miss:["That all you got?","Sloppy."],scratch:["Scratch! Amateur hour.","Pocketed your pride."],score:["Too easy.","Rack 'em up."],slow:["We don't have all night.","Shoot already."],win:["Sharks don't lose.","Chum in the water."],lose:["You got lucky.","Rematch. Now."]}},
- {id:'duchess',name:'The Duchess',avatar:'👑',difficulty:0.70,taunts:{think:["How quaint.","Observe true class."],miss:["Pity.","How pedestrian."],scratch:["Oh dear, a scratch.","Tut tut."],score:["Naturally.","As expected."],slow:["Do hurry, darling.","I haven't all evening."],win:["Checkmate, darling.","A flawless reign."],lose:["Well played, commoner.","Hmph."]}},
- {id:'doc',name:'Doc Banks',avatar:'🎩',difficulty:0.55,taunts:{think:["Angle… spin… yes.","Geometry never lies."],miss:["Margin of error.","Recalculating."],scratch:["A statistical anomaly.","The cue betrays you."],score:["Predictable physics.","Q.E.D."],slow:["Time is a variable.","Decision paralysis?"],win:["The numbers favored me.","Proof complete."],lose:["Fascinating.","I'll revise my model."]}},
- {id:'vegas',name:'Vegas Vince',avatar:'🎰',difficulty:0.66,taunts:{think:["Double or nothin'.","House always wins."],miss:["Bust!","Bad beat, pal."],scratch:["Snake eyes!","You crapped out."],score:["Jackpot!","Cha-ching!"],slow:["Clock's running.","Place your bets… today."],win:["Cash me out!","Winner winner."],lose:["You broke the bank.","I'll get it back."]}},
- {id:'zen',name:'Master Zen',avatar:'🧘',difficulty:0.74,taunts:{think:["Become the cue.","Stillness before motion."],miss:["Attachment to outcome.","The river bends."],scratch:["Chaos finds you.","Your ball comes home."],score:["Effortless.","Water finds its path."],slow:["Patience is not hesitation.","The moment passes."],win:["Balance achieved.","The table is at peace."],lose:["I am but a student.","You taught me today."]}},
- {id:'tank',name:'Tank Romano',avatar:'💪',difficulty:0.58,taunts:{think:["I'll SMASH it.","Power incoming."],miss:["Too much sauce.","Whoops."],scratch:["I scratched! Don't laugh.","My bad."],score:["BOOM!","Crushed it!"],slow:["You stuck or what?","Quit stallin'!"],win:["TANK WINS!","Flex on 'em."],lose:["You got muscle too.","Respect."]}},
- {id:'lola',name:'Lola Quick',avatar:'⚡',difficulty:0.68,taunts:{think:["Blink and miss it.","Fast hands."],miss:["Too slow… eh, me too.","Recalibrating."],scratch:["Into the hole!","That'll sting."],score:["Speed kills!","Next!"],slow:["I've aged waiting.","Anytime now…"],win:["Too quick for ya.","GG, slowpoke."],lose:["You kept up.","Run it back."]}},
- {id:'ghost',name:'The Ghost',avatar:'👻',difficulty:0.80,taunts:{think:["…","You won't see it coming."],miss:["…strange.","A rare lapse."],scratch:["Boo. Scratch.","Your ball haunts the pocket."],score:["Vanished.","Gone, like your chances."],slow:["I have eternity.","…still waiting…"],win:["You never had a chance.","I was never here."],lose:["Impossible…","…we meet again."]}},
- {id:'champ',name:'Champ Carter',avatar:'🏆',difficulty:0.90,taunts:{think:["Watch the champ.","This is my house."],miss:["Even legends slip.","Rare."],scratch:["Rookie mistake. Yours.","Bold move."],score:["Textbook.","Crowd goes wild."],slow:["Champions decide fast.","The title waits for no one."],win:["Undefeated.","Bow to the champ."],lose:["You beat me? Respect.","New legend in town."]}},
- {id:'nova',name:'Nova Rey',avatar:'🌟',difficulty:0.85,taunts:{think:["Lining up brilliance.","Stardust and angles."],miss:["A cosmic fluke.","Off by a hair."],scratch:["Gravity wins.","Down the wormhole."],score:["Supernova!","Lights out."],slow:["The stars are aging.","Shine or step aside."],win:["I burn brightest.","Eclipsed you."],lose:["You outshone me.","A new star rises."]}}
-];
-
-// ---- State ----
-var G={cv:null,ctx:null,spinCv:null,spinCtx:null,W:0,H:0,geom:null,balls:[],cue:null,
- state:'aiming',turn:'you',aim:0,power:0,drawPull:0,spin:{x:0,y:0},cueSpin:{x:0,y:0},spinUsed:false,
- scores:{you:0,ai:0},pottedThisShot:[],scratch:false,firstHit:null,
- ai:CHARACTERS[1],raf:null,turnStart:0,slowWarned:false,pointer:{x:0,y:0},bubbleTimer:null,sfxTime:0,t:0};
-
-// ---- Progression: levels + unlockable cues ----
-// traits: power (shot speed), spin (English strength), assist (1=arrow, 2=full path optics)
-var CUES=[
- {id:'ash',      name:'Ash Classic',  unlock:1,  traits:{power:1.00,spin:1.00,assist:1}, shaft:'#d9b271', glow:'rgba(217,178,113,0.6)', desc:'Balanced all-rounder. No frills, no weaknesses — a fine first cue.'},
- {id:'viper',    name:'Neon Viper',   unlock:2,  traits:{power:0.95,spin:1.30,assist:1}, shaft:'#39e08a', glow:'rgba(57,224,138,0.85)', desc:'Whippy shaft loads heavy English — masters draw, follow & swerve.'},
- {id:'sledge',   name:'Sledgehammer', unlock:3,  traits:{power:1.25,spin:0.80,assist:1}, shaft:'#ff5a5a', glow:'rgba(255,90,90,0.85)', desc:'Brutal break power for long pots — but fine spin is harder.'},
- {id:'laser',    name:'Laser Sight',  unlock:4,  traits:{power:1.00,spin:1.00,assist:2}, shaft:'#36e6ff', glow:'rgba(54,230,255,0.9)', desc:'Pro aiming optics — projects the full object-ball path to the rail.'},
- {id:'gold',     name:'Gold Standard',unlock:6,  traits:{power:1.10,spin:1.15,assist:1}, shaft:'#ffd24a', glow:'rgba(255,210,74,0.9)', desc:'Tournament cue: a touch more power AND more spin. No downside.'},
- {id:'phantom',  name:'The Phantom',  unlock:8,  traits:{power:1.05,spin:1.40,assist:2}, shaft:'#b06bff', glow:'rgba(176,107,255,0.9)', desc:'Eerie control — elite spin paired with full path optics.'},
- {id:'excalibur',name:'Excalibur',    unlock:10, traits:{power:1.20,spin:1.25,assist:2}, shaft:'#ffffff', glow:'rgba(255,255,255,0.95)', desc:'The legendary cue. Power, spin and optics — mastery itself.'}
-];
-function loadPlayer(){ try{ var s=JSON.parse(localStorage.getItem('cueSharks_v1')); if(s&&s.unlocked&&s.unlocked.length) return s; }catch(e){} return {xp:0,level:1,cue:'ash',unlocked:['ash']}; }
-var PLAYER=loadPlayer();
-function savePlayer(){ try{ localStorage.setItem('cueSharks_v1',JSON.stringify(PLAYER)); }catch(e){} }
-function curCue(){ for(var i=0;i<CUES.length;i++){ if(CUES[i].id===PLAYER.cue) return CUES[i]; } return CUES[0]; }
-function levelInfo(xp){ var lvl=1,need=100,acc=0; while(xp>=acc+need){ acc+=need; lvl++; need=100+(lvl-1)*60; } return {level:lvl,into:xp-acc,need:need}; }
-function addXp(n){ if(n<=0)return; var before=levelInfo(PLAYER.xp).level; PLAYER.xp+=n; var info=levelInfo(PLAYER.xp); PLAYER.level=info.level;
-  if(info.level>before) checkUnlocks(before,info.level); savePlayer(); renderLevel(); }
-function checkUnlocks(from,to){ CUES.forEach(function(c){ if(c.unlock>from && c.unlock<=to && PLAYER.unlocked.indexOf(c.id)<0){ PLAYER.unlocked.push(c.id); showUnlock(c); } }); }
-function renderLevel(){ var info=levelInfo(PLAYER.xp);
-  var lb=document.getElementById('lvl-badge'); if(lb) lb.textContent='Lv '+info.level;
-  var xf=document.getElementById('xp-fill'); if(xf) xf.style.width=Math.round(info.into/info.need*100)+'%';
-  var xt=document.getElementById('xp-text'); if(xt) xt.textContent=info.into+' / '+info.need+' XP'; }
-function showUnlock(c){ var t=document.getElementById('unlock-toast'); if(!t)return;
-  t.innerHTML='🎉 NEW CUE UNLOCKED<small>'+c.name+' — '+c.desc+'</small>'; t.classList.remove('hidden');
-  clearTimeout(showUnlock._t); showUnlock._t=setTimeout(function(){ t.classList.add('hidden'); },5000); }
-function openCues(){ renderCues(); document.getElementById('cues-modal').classList.remove('hidden'); }
-function closeCues(){ document.getElementById('cues-modal').classList.add('hidden'); }
-function traitBar(label,val,color){ var pct=Math.max(8,Math.min(100,Math.round(val/1.4*100)));
-  return '<div class="trait"><span>'+label+'</span><div class="trait-bar"><span style="width:'+pct+'%;background:'+color+'"></span></div></div>'; }
-function renderCues(){
-  var grid=document.getElementById('cues-grid'); if(!grid)return; grid.innerHTML='';
-  CUES.forEach(function(c){
-    var owned=PLAYER.unlocked.indexOf(c.id)>=0, eq=(PLAYER.cue===c.id);
-    var card=document.createElement('div');
-    card.className='cue-card '+(eq?'equipped':(owned?'owned':'locked'));
-    var status=eq?'<span class="cue-status eq">Equipped</span>':(owned?'<span class="cue-status ok">Tap to equip</span>':'<span class="cue-status lk">Lv '+c.unlock+'</span>');
-    card.innerHTML=status+
-      '<div class="cue-name">'+c.name+'</div>'+
-      '<div class="cue-rod" style="background:linear-gradient(90deg,#2a3550,'+c.shaft+');box-shadow:0 0 10px '+c.glow+'"></div>'+
-      '<div class="cue-desc">'+c.desc+'</div>'+
-      '<div class="cue-traits">'+traitBar('Power',c.traits.power,'var(--red)')+traitBar('Spin',c.traits.spin,'var(--green)')+traitBar('Optics',c.traits.assist/2,'var(--cyan)')+'</div>';
-    if(owned&&!eq) card.addEventListener('click',function(){ PLAYER.cue=c.id; savePlayer(); renderCues(); });
-    grid.appendChild(card);
-  });
-}
-function projectToRail(x,y,dx,dy,g){ var big=g.R+g.B+1000;
-  var tx=dx>0.001?(g.R-x)/dx:dx<-0.001?(g.L-x)/dx:big, ty=dy>0.001?(g.B-y)/dy:dy<-0.001?(g.T-y)/dy:big;
-  var t=Math.min(tx>0?tx:big,ty>0?ty:big,big); return {x:x+dx*t,y:y+dy*t}; }
-
-window.addEventListener('DOMContentLoaded',init);
-
-function init(){
-  G.cv=document.getElementById('table'); G.ctx=G.cv.getContext('2d');
-  G.spinCv=document.getElementById('spin'); G.spinCtx=G.spinCv.getContext('2d');
-  buildOpponentSelect(); bindControls();
-  document.getElementById('cues-btn').addEventListener('click',openCues);
-  document.getElementById('cues-close').addEventListener('click',closeCues);
-  document.getElementById('cues-modal').addEventListener('click',function(e){ if(e.target.id==='cues-modal') closeCues(); });
-  renderLevel();
-  window.addEventListener('resize',resize); resize(); newGame(); loop();
-}
-function buildOpponentSelect(){
-  var sel=document.getElementById('opponent-select');
-  CHARACTERS.forEach(function(c,i){ var o=document.createElement('option'); o.value=i; o.textContent=c.avatar+'  '+c.name; sel.appendChild(o); });
-  sel.value=1; sel.addEventListener('change',function(){ G.ai=CHARACTERS[+sel.value]; newGame(); });
-}
-
-// ---- Geometry ----
-function computeGeom(){
-  var W=G.W,H=G.H,rail=Math.round(W*0.035),bR=Math.round(W*0.0165),pR=Math.round(bR*1.75);
-  var L=rail,R=W-rail,T=rail,B=H-rail;
-  G.geom={rail:rail,bR:bR,pR:pR,L:L,R:R,T:T,B:B,pockets:[{x:L,y:T},{x:W/2,y:T},{x:R,y:T},{x:L,y:B},{x:W/2,y:B},{x:R,y:B}]};
-}
-function resize(){
-  var wrap=G.cv.parentNode, w=Math.max(280,Math.floor(wrap.clientWidth)), h=Math.round(w/2), oldW=G.W;
-  G.cv.width=w; G.cv.height=h; G.W=w; G.H=h; computeGeom();
-  if(oldW&&G.balls.length){ var s=w/oldW; G.balls.forEach(function(b){ b.x*=s; b.y*=s; b.vx*=s; b.vy*=s; b.r=G.geom.bR; }); }
-  drawSpin();
-}
-function maxV(){ return G.geom.bR*2.0*curCue().traits.power; }
-function stopV(){ return G.geom.bR*0.02; }
-function spinForce(){ return G.geom.bR*2.0*0.30*curCue().traits.spin; }
-
-// ---- Colors ----
-function ballColor(n){ var c=['#f3eedd','#ffd23a','#2b7bff','#ff4d4d','#b15bff','#ff9430','#22c55e','#9b2d2d','#15151c']; return n<=8?(c[n]||'#888'):(c[n-8]||'#888'); }
-function striped(n){ return n>8; }
-
-// ---- New game / rack ----
-function newGame(){
-  G.scores={you:0,ai:0}; updateScore(); rack();
-  G.state='aiming'; G.turn='you'; G.aim=0; G.power=0; G.drawPull=0; G.spin={x:0,y:0}; G.cueSpin={x:0,y:0};
-  G.turnStart=performance.now(); G.slowWarned=false; hideMessage(); setTurnText(); hideBubble(); setPowerUI(0); drawSpin();
-}
-function rack(){
-  var g=G.geom,cy=(g.T+g.B)/2;
-  var cue={n:0,x:g.L+(g.R-g.L)*0.25,y:cy,vx:0,vy:0,r:g.bR,potted:false,spin:0};
-  var order=[1,9,2,3,8,10,4,11,5,12,6,13,7,14,15];
-  var sp=g.bR*2.08,dx=sp*0.87,fx=g.L+(g.R-g.L)*0.66;
-  var balls=[cue],idx=0,row=0;
-  while(idx<order.length){ for(var k=0;k<=row&&idx<order.length;k++){ balls.push({n:order[idx],x:fx+row*dx,y:cy+(k-row/2)*sp,vx:0,vy:0,r:g.bR,potted:false,spin:0}); idx++; } row++; }
-  G.balls=balls; G.cue=cue;
-}
-
-// ---- Controls ----
-function bindControls(){
-  var cv=G.cv;
-  function rel(e){ var r=cv.getBoundingClientRect(),t=e.touches?e.touches[0]:e; return {x:(t.clientX-r.left)*(cv.width/r.width),y:(t.clientY-r.top)*(cv.height/r.height)}; }
-  function aimMove(e){ var p=rel(e); G.pointer=p; if(G.state==='aiming'&&G.turn==='you'){ var a=Math.atan2(p.y-G.cue.y,p.x-G.cue.x); if(isFinite(a))G.aim=a; } }
-  cv.addEventListener('mousemove',aimMove);
-  cv.addEventListener('touchstart',function(e){ e.preventDefault(); ensureAudio(); aimMove(e); },{passive:false});
-  cv.addEventListener('touchmove',function(e){ e.preventDefault(); aimMove(e); },{passive:false});
-
-  // Premium power gauge — drag down to draw, release to fire
-  var gauge=document.getElementById('power-gauge'); var dragging=false;
-  function setFromY(clientY){ var r=gauge.getBoundingClientRect();
-    var t = r.height>=r.width ? (clientY-r.top)/r.height : (clientY-r.top)/r.height; // vertical
-    t=Math.max(0,Math.min(1,t)); G.power=t; G.drawPull=t; setPowerUI(t);
-  }
-  function gStart(e){ ensureAudio(); if(G.turn!=='you'||G.state!=='aiming')return; dragging=true; setFromY((e.touches?e.touches[0]:e).clientY); }
-  function gMove(e){ if(!dragging)return; setFromY((e.touches?e.touches[0]:e).clientY); }
-  function gEnd(){ if(!dragging)return; dragging=false; if(G.turn==='you'&&G.state==='aiming'&&G.power>0.05) shoot(G.power); G.power=0; G.drawPull=0; setPowerUI(0); }
-  gauge.addEventListener('mousedown',gStart); window.addEventListener('mousemove',gMove); window.addEventListener('mouseup',gEnd);
-  gauge.addEventListener('touchstart',function(e){ e.preventDefault(); gStart(e); },{passive:false});
-  gauge.addEventListener('touchmove',function(e){ e.preventDefault(); gMove(e); },{passive:false});
-  gauge.addEventListener('touchend',function(e){ e.preventDefault(); gEnd(); },{passive:false});
-
-  // Spin sphere
-  var sc=G.spinCv; var sdrag=false;
-  function setSpin(e){ var r=sc.getBoundingClientRect(),t=e.touches?e.touches[0]:e,cx=r.width/2,cy=r.height/2,rad=r.width/2-7;
-    var nx=(t.clientX-r.left-cx)/rad,ny=(t.clientY-r.top-cy)/rad,m=Math.hypot(nx,ny); if(m>1){nx/=m;ny/=m;} G.spin={x:nx,y:ny}; drawSpin(); }
-  sc.addEventListener('mousedown',function(e){ sdrag=true; setSpin(e); });
-  window.addEventListener('mousemove',function(e){ if(sdrag)setSpin(e); });
-  window.addEventListener('mouseup',function(){ sdrag=false; });
-  sc.addEventListener('touchstart',function(e){ e.preventDefault(); setSpin(e); },{passive:false});
-  sc.addEventListener('touchmove',function(e){ e.preventDefault(); setSpin(e); },{passive:false});
-  document.getElementById('spin-reset').addEventListener('click',function(){ G.spin={x:0,y:0}; drawSpin(); });
-
-  document.getElementById('new-game').addEventListener('click',function(){ ensureAudio(); newGame(); });
-  document.getElementById('message-btn').addEventListener('click',newGame);
-}
-function setPowerUI(t){ document.getElementById('power-fill').style.height=Math.round(t*100)+'%'; document.getElementById('power-fill').style.width=Math.round(t*100)+'%'; document.getElementById('power-pct').textContent=Math.round(t*100)+'%'; }
-
-// ---- Shooting ----
-function shoot(power){
-  if(G.state!=='aiming')return;
-  var v=power*maxV(); G.cue.vx=Math.cos(G.aim)*v; G.cue.vy=Math.sin(G.aim)*v;
-  G.cue.spin=G.spin.x; G.cueSpin={x:G.spin.x,y:G.spin.y}; G.spinUsed=false;
-  G.pottedThisShot=[]; G.scratch=false; G.firstHit=null; G.state='shooting'; sfxHit(power);
-}
-
-// ---- Physics ----
-function update(){
-  if(G.state!=='shooting')return;
-  var g=G.geom,bs=G.balls,i,maxSp=0;
-  for(i=0;i<bs.length;i++){ if(!bs[i].potted){ var s=Math.abs(bs[i].vx)+Math.abs(bs[i].vy); if(s>maxSp)maxSp=s; } }
-  var steps=Math.max(1,Math.min(12,Math.ceil(maxSp/(g.bR*0.4))));
-  for(var st=0;st<steps;st++) step(g,bs,1/steps);
-  var moving=false;
-  for(i=0;i<bs.length;i++){ var b=bs[i]; if(b.potted)continue; b.vx*=FR; b.vy*=FR; b.spin*=0.985; if(Math.hypot(b.vx,b.vy)<stopV()){ b.vx=0; b.vy=0; } else moving=true; }
-  if(!moving) endShot();
-}
-function step(g,bs,dt){
-  var i,k;
-  for(i=0;i<bs.length;i++){ var b=bs[i]; if(b.potted)continue; b.x+=b.vx*dt; b.y+=b.vy*dt;
-    var nearPocket=false; for(k=0;k<g.pockets.length;k++){ if(Math.hypot(b.x-g.pockets[k].x,b.y-g.pockets[k].y)<g.pR*1.7){ nearPocket=true; break; } }
-    if(!nearPocket){ var hit='';
-      if(b.x-b.r<g.L){ b.x=g.L+b.r; b.vx=Math.abs(b.vx)*REST_RAIL; hit='v'; }
-      if(b.x+b.r>g.R){ b.x=g.R-b.r; b.vx=-Math.abs(b.vx)*REST_RAIL; hit='v'; }
-      if(b.y-b.r<g.T){ b.y=g.T+b.r; b.vy=Math.abs(b.vy)*REST_RAIL; hit='h'; }
-      if(b.y+b.r>g.B){ b.y=g.B-b.r; b.vy=-Math.abs(b.vy)*REST_RAIL; hit='h'; }
-      if(hit){ if(b.n===0&&Math.abs(b.spin)>0.05){ if(hit==='v') b.vy+=b.spin*spinForce()*0.4; else b.vx+=b.spin*spinForce()*0.4; b.spin*=0.5; } sfxRail(); }
-    }
-  }
-  for(i=0;i<bs.length;i++){ for(k=i+1;k<bs.length;k++){ var A=bs[i],B=bs[k]; if(A.potted||B.potted)continue;
-    var dx=B.x-A.x,dy=B.y-A.y,d=Math.sqrt(dx*dx+dy*dy),minD=A.r+B.r;
-    if(d<minD&&d>0.0001){ var nx=dx/d,ny=dy/d,dv=(A.vx-B.vx)*nx+(A.vy-B.vy)*ny;
-      if(dv>0){ var imp=dv*REST_BALL; A.vx-=imp*nx; A.vy-=imp*ny; B.vx+=imp*nx; B.vy+=imp*ny; sfxClick(dv); }
-      var ov=(minD-d)*0.5; A.x-=nx*ov; A.y-=ny*ov; B.x+=nx*ov; B.y+=ny*ov;
-      if(A.n===0||B.n===0){ var other=(A.n===0)?B:A; if(G.firstHit===null)G.firstHit=other.n;
-        if(!G.spinUsed){ var cb=(A.n===0)?A:B,ux=Math.cos(G.aim),uy=Math.sin(G.aim),fd=-G.cueSpin.y;
-          cb.vx+=ux*fd*spinForce(); cb.vy+=uy*fd*spinForce(); cb.vx+=(-uy)*G.cueSpin.x*spinForce()*0.6; cb.vy+=(ux)*G.cueSpin.x*spinForce()*0.6; G.spinUsed=true; } }
-    }
-  } }
-  for(i=0;i<bs.length;i++){ var ball=bs[i]; if(ball.potted)continue;
-    for(k=0;k<g.pockets.length;k++){ if(Math.hypot(ball.x-g.pockets[k].x,ball.y-g.pockets[k].y)<g.pR){ ball.potted=true; ball.vx=ball.vy=0; G.pottedThisShot.push(ball.n); sfxPocket(); break; } } }
-}
-
-// ---- End of shot ----
-function endShot(){
-  var g=G.geom;
-  if(G.cue.potted){ G.cue.potted=false; G.cue.x=g.L+(g.R-g.L)*0.25; G.cue.y=(g.T+g.B)/2; G.cue.vx=G.cue.vy=0; G.cue.spin=0; G.scratch=true; }
-  var shooter=G.turn, potted=G.pottedThisShot.filter(function(n){ return n>0; }).length;
-  if(potted>0){ G.scores[shooter]+=potted; updateScore(); if(shooter==='you') addXp(potted*12); }
-  var remaining=G.balls.filter(function(b){ return b.n>0&&!b.potted; }).length;
-  if(remaining===0) return gameOver();
-  if(shooter==='you'){ if(G.scratch) aiSay('scratch'); else if(potted===0) aiSay('miss'); }
-  else { if(potted>0) aiSay('score'); }
-  var continues=(potted>0&&!G.scratch);
-  G.state='aiming'; if(!continues) G.turn=(shooter==='you')?'ai':'you';
-  setTurnText(); G.turnStart=performance.now(); G.slowWarned=false;
-  if(G.turn==='ai') scheduleAI();
-}
-function gameOver(){ G.state='over'; var youWin=G.scores.you>=G.scores.ai; aiSay(youWin?'lose':'win');
-  var gained = youWin ? (60+Math.round(G.ai.difficulty*40)) : 20; addXp(gained);
-  showMessage(youWin?'You Win! 🏆':G.ai.name+' Wins',
-    'Final — You '+G.scores.you+'  ·  '+G.ai.name+' '+G.scores.ai+'   ·   +'+gained+' XP'); }
-
-// ---- AI ----
-function scheduleAI(){ G.state='ai-think'; if(Math.random()<0.6) aiSay('think'); setTimeout(aiShoot,850+Math.random()*750); }
-function aiShoot(){ if(G.turn!=='ai'||G.state!=='ai-think')return; var plan=aiPlan(); G.state='aiming'; G.spin={x:0,y:0}; G.cueSpin={x:0,y:0};
-  if(!plan){ var near=null,nd=1e9; G.balls.forEach(function(b){ if(b.n<=0||b.potted)return; var dd=Math.hypot(b.x-G.cue.x,b.y-G.cue.y); if(dd<nd){nd=dd;near=b;} });
-    if(!near)return; G.aim=Math.atan2(near.y-G.cue.y,near.x-G.cue.x)+(Math.random()*2-1)*0.12; shoot(0.55); return; }
-  G.aim=plan.aim+(Math.random()*2-1)*plan.err; shoot(plan.power); }
-function aiPlan(){
-  var cue=G.cue,g=G.geom,best=null;
-  G.balls.forEach(function(b){ if(b.n<=0||b.potted)return;
-    g.pockets.forEach(function(p){ var bpx=p.x-b.x,bpy=p.y-b.y,bpd=Math.hypot(bpx,bpy); if(bpd<1)return;
-      var ux=bpx/bpd,uy=bpy/bpd,ghostX=b.x-ux*(2*g.bR),ghostY=b.y-uy*(2*g.bR);
-      var ax=ghostX-cue.x,ay=ghostY-cue.y,ad=Math.hypot(ax,ay); if(ad<1)return;
-      var dot=(ax/ad)*ux+(ay/ad)*uy; if(dot<0.25)return;
-      var cost=ad+bpd*1.15+(1-dot)*g.W*1.6; if(!best||cost<best.cost){ best={cost:cost,aim:Math.atan2(ay,ax),dist:ad+bpd,dot:dot}; } });
-  });
-  if(!best)return null; var diff=G.ai.difficulty;
-  return {aim:best.aim,err:(1-diff)*0.17*(1.3-best.dot),power:Math.min(1,0.34+best.dist/(g.W*1.3)+(1-diff)*0.08)};
-}
-
-// ---- Commentary ----
-function aiSay(cat){ var pool=(G.ai.taunts&&G.ai.taunts[cat])||null; if(!pool||!pool.length)return;
-  showBubble(pool[Math.floor(Math.random()*pool.length)]); playVoice(G.ai.id,cat); }
-function showBubble(text){ var b=document.getElementById('ai-bubble'); b.textContent=text; b.classList.remove('hidden');
-  if(G.bubbleTimer)clearTimeout(G.bubbleTimer); G.bubbleTimer=setTimeout(hideBubble,3200); }
-function hideBubble(){ var b=document.getElementById('ai-bubble'); if(b)b.classList.add('hidden'); }
-
-// ---- Audio (Web Audio SFX + Audio() voice hooks) ----
-var _ac=null, VOICE_BASE='voices/', _voiceCache={};
-function ensureAudio(){ if(_ac)return; try{ _ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ _ac=null; } }
-function tone(freq,dur,type,gain){ if(!_ac)return; var now=_ac.currentTime; if(now-G.sfxTime<0.012)return; G.sfxTime=now;
-  var o=_ac.createOscillator(),g=_ac.createGain(); o.type=type||'sine'; o.frequency.value=freq;
-  g.gain.value=gain||0.08; g.gain.exponentialRampToValueAtTime(0.0001,now+dur); o.connect(g); g.connect(_ac.destination); o.start(now); o.stop(now+dur); }
-function sfxHit(p){ tone(150+p*120,0.10,'triangle',0.10); }
-function sfxClick(dv){ tone(420+Math.min(600,dv*40),0.05,'square',0.05); }
-function sfxRail(){ tone(180,0.05,'sine',0.04); }
-function sfxPocket(){ tone(90,0.18,'sine',0.10); }
-// Drop voice files at voices/<id>/<category>.mp3 — played if present, silent if missing.
-function playVoice(id,cat){ try{ var key=id+'/'+cat,a=_voiceCache[key];
-  if(!a){ a=new Audio(VOICE_BASE+key+'.mp3'); a.volume=0.9; _voiceCache[key]=a; } a.currentTime=0;
-  var pr=a.play(); if(pr&&pr.catch) pr.catch(function(){}); }catch(e){} }
-
-// ---- HUD ----
-function updateScore(){ document.getElementById('you-score').textContent=G.scores.you; document.getElementById('ai-score').textContent=G.scores.ai;
-  document.getElementById('ai-name').textContent=G.ai.name; document.getElementById('ai-avatar').textContent=G.ai.avatar; }
-function setTurnText(){ var el=document.getElementById('turn-indicator');
-  if(G.turn==='you'){ el.textContent='Your Shot'; el.classList.remove('ai'); } else { el.textContent=G.ai.name+'’s Shot'; el.classList.add('ai'); } }
-function showMessage(t,s){ document.getElementById('message-title').textContent=t; document.getElementById('message-sub').textContent=s; document.getElementById('message').classList.remove('hidden'); }
-function hideMessage(){ document.getElementById('message').classList.add('hidden'); }
-
-// ---- Loop ----
-function loop(){ G.raf=requestAnimationFrame(loop); G.t+=0.05;
-  if(G.turn==='you'&&G.state==='aiming'&&!G.slowWarned&&performance.now()-G.turnStart>11000){ G.slowWarned=true; aiSay('slow'); }
-  update(); draw(); }
-
-// ---- Render (neon / Hustle Kings style) ----
-function draw(){
-  var ctx=G.ctx,g=G.geom,W=G.W,H=G.H;
-  // backdrop
-  ctx.fillStyle='#05070f'; ctx.fillRect(0,0,W,H);
-  // rail frame with neon edge
-  ctx.save();
-  ctx.shadowColor='rgba(54,230,255,0.55)'; ctx.shadowBlur=18;
-  roundRect(ctx,2,2,W-4,H-4,16); ctx.fillStyle='#0a0f1c'; ctx.fill();
-  ctx.restore();
-  // felt
-  var fg=ctx.createRadialGradient(W/2,H/2,Math.min(W,H)*0.1,W/2,H/2,Math.max(W,H)*0.7);
-  fg.addColorStop(0,'#16213f'); fg.addColorStop(1,'#0b1120');
-  roundRect(ctx,g.L,g.T,g.R-g.L,g.B-g.T,8); ctx.fillStyle=fg; ctx.fill();
-  // neon inner rim
-  ctx.save(); ctx.shadowColor='rgba(54,230,255,0.6)'; ctx.shadowBlur=12;
-  ctx.strokeStyle='rgba(54,230,255,0.5)'; ctx.lineWidth=2; roundRect(ctx,g.L,g.T,g.R-g.L,g.B-g.T,8); ctx.stroke(); ctx.restore();
-  // head string
-  ctx.save(); ctx.strokeStyle='rgba(54,230,255,0.10)'; ctx.setLineDash([4,9]);
-  var hx=g.L+(g.R-g.L)*0.25; ctx.beginPath(); ctx.moveTo(hx,g.T); ctx.lineTo(hx,g.B); ctx.stroke(); ctx.setLineDash([]); ctx.restore();
-  // pockets
-  g.pockets.forEach(function(p){ ctx.beginPath(); ctx.arc(p.x,p.y,g.pR,0,7); ctx.fillStyle='#02040a'; ctx.fill();
-    ctx.save(); ctx.shadowColor='rgba(54,230,255,0.5)'; ctx.shadowBlur=8; ctx.strokeStyle='rgba(54,230,255,0.35)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(p.x,p.y,g.pR,0,7); ctx.stroke(); ctx.restore(); });
-
-  if(G.state==='aiming'&&G.turn==='you'&&!G.cue.potted) drawAim(ctx,g);
-  G.balls.forEach(function(b){ if(!b.potted) drawBall(ctx,b); });
-  if(G.state==='aiming'&&G.turn==='you'&&!G.cue.potted) drawCue(ctx,g);
-}
-function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-
-function drawAim(ctx,g){
-  var cue=G.cue,fx=Math.cos(G.aim),fy=Math.sin(G.aim),best=Infinity,hit=null;
-  G.balls.forEach(function(b){ if(b===cue||b.potted)return; var rx=b.x-cue.x,ry=b.y-cue.y,proj=rx*fx+ry*fy; if(proj<=0)return;
-    var perp=Math.abs(rx*(-fy)+ry*fx),sum=cue.r+b.r; if(perp<=sum){ var d=proj-Math.sqrt(Math.max(0,sum*sum-perp*perp)); if(d<best){ best=d; hit=b; } } });
-  var big=g.R+g.B+1000;
-  var tx=fx>0.001?(g.R-cue.r-cue.x)/fx:fx<-0.001?(g.L+cue.r-cue.x)/fx:big;
-  var ty=fy>0.001?(g.B-cue.r-cue.y)/fy:fy<-0.001?(g.T+cue.r-cue.y)/fy:big;
-  var railLen=Math.min(tx>0?tx:big,ty>0?ty:big,big), len=hit?Math.min(best,railLen):railLen;
-  var gx=cue.x+fx*len, gy=cue.y+fy*len, pulse=0.55+0.35*Math.sin(G.t*2.2);
-  ctx.save();
-  ctx.shadowColor='rgba(54,230,255,0.9)'; ctx.shadowBlur=10;
-  ctx.strokeStyle='rgba(120,240,255,'+pulse.toFixed(3)+')'; ctx.lineWidth=1.6;
-  ctx.beginPath(); ctx.moveTo(cue.x,cue.y); ctx.lineTo(gx,gy); ctx.stroke();
-  if(hit){
-    ctx.beginPath(); ctx.arc(gx,gy,cue.r,0,7); ctx.strokeStyle='rgba(180,250,255,'+pulse.toFixed(3)+')'; ctx.lineWidth=1.4; ctx.stroke();
-    var ox=hit.x-gx,oy=hit.y-gy,od=Math.hypot(ox,oy)||1,dirx=ox/od,diry=oy/od;
-    ctx.shadowColor='rgba(255,210,74,0.9)';
-    neonArrow(ctx,hit.x,hit.y,hit.x+dirx*g.bR*5,hit.y+diry*g.bR*5,'rgba(255,224,120,0.95)',2.4);
-    var px=-diry,py=dirx,apx=gx-cue.x,apy=gy-cue.y; if(apx*px+apy*py<0){ px=-px; py=-py; }
-    ctx.shadowColor='rgba(255,61,240,0.8)'; ctx.strokeStyle='rgba(255,120,240,'+pulse.toFixed(3)+')'; ctx.lineWidth=1.3; ctx.setLineDash([5,5]);
-    ctx.beginPath(); ctx.moveTo(gx,gy); ctx.lineTo(gx+px*g.bR*3.2,gy+py*g.bR*3.2); ctx.stroke(); ctx.setLineDash([]);
-    // Optics trait: project the object-ball path all the way to the rail/pocket
-    if(curCue().traits.assist>=2){ var ep=projectToRail(hit.x,hit.y,dirx,diry,g);
-      ctx.shadowColor='rgba(255,224,120,0.7)'; ctx.strokeStyle='rgba(255,224,120,0.5)'; ctx.lineWidth=1.2; ctx.setLineDash([4,8]);
-      ctx.beginPath(); ctx.moveTo(hit.x+dirx*g.bR*5,hit.y+diry*g.bR*5); ctx.lineTo(ep.x,ep.y); ctx.stroke(); ctx.setLineDash([]); }
-  }
-  ctx.restore();
-}
-function neonArrow(ctx,x1,y1,x2,y2,color,lw){
-  var dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy); if(len<4)return; var a=Math.atan2(dy,dx),ah=Math.max(8,lw*3.5);
-  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=lw; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-ah*Math.cos(a-0.42),y2-ah*Math.sin(a-0.42)); ctx.lineTo(x2-ah*Math.cos(a+0.42),y2-ah*Math.sin(a+0.42)); ctx.closePath(); ctx.fill();
-}
-
-function drawBall(ctx,b){
-  var r=b.r,col=ballColor(b.n);
-  // drop shadow on felt
-  ctx.save(); ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(b.x+r*0.16,b.y+r*0.42,r*0.98,r*0.5,0,0,7); ctx.fill(); ctx.restore();
-  // sphere body
-  ctx.save();
-  if(striped(b.n)){
-    ctx.beginPath(); ctx.arc(b.x,b.y,r,0,7); ctx.fillStyle='#f3eedd'; ctx.fill();
-    ctx.save(); ctx.beginPath(); ctx.arc(b.x,b.y,r,0,7); ctx.clip(); ctx.fillStyle=col; ctx.fillRect(b.x-r,b.y-r*0.55,r*2,r*1.1); ctx.restore();
-  } else { ctx.beginPath(); ctx.arc(b.x,b.y,r,0,7); ctx.fillStyle=col; ctx.fill(); }
-  // glossy 3D shading
-  var lg=ctx.createRadialGradient(b.x-r*0.36,b.y-r*0.42,r*0.08,b.x,b.y,r*1.05);
-  lg.addColorStop(0,'rgba(255,255,255,0.6)'); lg.addColorStop(0.42,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(0,0,0,0.5)');
-  ctx.beginPath(); ctx.arc(b.x,b.y,r,0,7); ctx.fillStyle=lg; ctx.fill();
-  // specular highlight
-  ctx.beginPath(); ctx.arc(b.x-r*0.34,b.y-r*0.38,r*0.16,0,7); ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fill();
-  ctx.lineWidth=1; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.arc(b.x,b.y,r,0,7); ctx.stroke();
-  if(b.n>0){ ctx.beginPath(); ctx.arc(b.x,b.y,r*0.46,0,7); ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.fill();
-    ctx.fillStyle='#15151c'; ctx.font='bold '+Math.round(r*0.68)+'px Rajdhani, monospace'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(b.n,b.x,b.y); }
-  ctx.restore();
-}
-
-function drawCue(ctx,g){
-  var cue=G.cue,fx=Math.cos(G.aim),fy=Math.sin(G.aim),gap=cue.r+5+G.drawPull*g.bR*5;
-  var x1=cue.x-fx*gap,y1=cue.y-fy*gap,x2=x1-fx*(g.bR*16),y2=y1-fy*(g.bR*16),xm=(x1+x2)/2,ym=(y1+y2)/2;
-  var cc=curCue();
-  ctx.save(); ctx.lineCap='round';
-  ctx.shadowColor=cc.glow; ctx.shadowBlur=8;
-  ctx.strokeStyle=cc.shaft; ctx.lineWidth=Math.max(3,g.bR*0.38); ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(xm,ym); ctx.stroke();
-  ctx.shadowBlur=0; ctx.strokeStyle='#2a3550'; ctx.lineWidth=Math.max(3,g.bR*0.46); ctx.beginPath(); ctx.moveTo(xm,ym); ctx.lineTo(x2,y2); ctx.stroke();
-  // glowing tip (cue color)
-  ctx.shadowColor=cc.glow; ctx.shadowBlur=12; ctx.fillStyle=cc.shaft; ctx.beginPath(); ctx.arc(x1,y1,Math.max(1.6,g.bR*0.14),0,7); ctx.fill();
-  ctx.restore();
-}
-
-// ---- Glossy spin sphere ----
-function drawSpin(){
-  var ctx=G.spinCtx; if(!ctx)return; var w=G.spinCv.width,h=G.spinCv.height,cx=w/2,cy=h/2,R=w/2-5;
-  ctx.clearRect(0,0,w,h);
-  // sphere
-  ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fillStyle='#e9eef7'; ctx.fill();
-  var lg=ctx.createRadialGradient(cx-R*0.35,cy-R*0.4,R*0.1,cx,cy,R);
-  lg.addColorStop(0,'rgba(255,255,255,0.9)'); lg.addColorStop(0.5,'rgba(255,255,255,0)'); lg.addColorStop(1,'rgba(10,20,40,0.55)');
-  ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.fillStyle=lg; ctx.fill();
-  // grid meridians
-  ctx.strokeStyle='rgba(40,70,120,0.25)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(cx-R,cy); ctx.lineTo(cx+R,cy); ctx.moveTo(cx,cy-R); ctx.lineTo(cx,cy+R); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(cx,cy,R*0.55,R,0,0,7); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(cx,cy,R,R*0.55,0,0,7); ctx.stroke();
-  // rim
-  ctx.lineWidth=2; ctx.strokeStyle='rgba(54,230,255,0.4)'; ctx.beginPath(); ctx.arc(cx,cy,R,0,7); ctx.stroke();
-  // contact reticle (neon)
-  var dx=cx+G.spin.x*(R-7),dy=cy+G.spin.y*(R-7);
-  ctx.save(); ctx.shadowColor='rgba(255,61,240,0.9)'; ctx.shadowBlur=10;
-  ctx.beginPath(); ctx.arc(dx,dy,6,0,7); ctx.fillStyle='#ff3df0'; ctx.fill();
-  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore();
-}
-</script>
+<script src="game3d.js"></script>
 </body>
 </html>
