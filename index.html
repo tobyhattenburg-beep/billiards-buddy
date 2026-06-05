@@ -160,9 +160,62 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
 .game-act-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
 #game-stage:fullscreen,#game-stage:-webkit-full-screen{background:#061a0b;padding:18px;display:flex;flex-direction:column;justify-content:center;gap:14px;}
 #game-stage:fullscreen #game-canvas,#game-stage:-webkit-full-screen #game-canvas{margin:0 auto;}
+
+/* ════ AUTHENTIC VISUAL SYSTEM ════ */
+/* Photographic backdrop layer (repurposes the old orphan .scene). Sits behind everything,
+   replacing the flat green. A dark gradient keeps text readable over the photo. */
+#app-bg{position:fixed;inset:0;z-index:-1;background-size:cover;background-position:center;background-attachment:fixed;transition:background-image 0.6s ease;}
+#app-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,26,11,0.82),rgba(6,26,11,0.92) 60%,rgba(6,26,11,0.97));}
+.glass-overlay{background:rgba(6,26,11,0.45);}
+
+/* Home hero — pool-hall photo with people playing, dark overlay, headline. */
+.hero{position:relative;margin:-1px -1px 18px;min-height:280px;display:flex;align-items:flex-end;border-radius:0 0 18px 18px;overflow:hidden;background-size:cover;background-position:center;}
+.hero::before{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,26,11,0.25),rgba(6,26,11,0.55) 55%,rgba(6,26,11,0.96));}
+.hero-inner{position:relative;padding:22px 20px 20px;width:100%;}
+.hero h1{font-family:'Playfair Display';font-size:30px;line-height:1.05;color:var(--ivory);text-shadow:0 2px 18px rgba(0,0,0,0.8);}
+.hero p{font-size:13px;color:var(--chalk);margin-top:6px;max-width:520px;line-height:1.5;text-shadow:0 1px 8px rgba(0,0,0,0.9);}
+.hero-cta{margin-top:14px;display:inline-flex;}
+
+/* Swipeable venue cards with real photos */
+.venue-swipe-hint{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--dim);margin-bottom:8px;}
+.venue-swipe{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:2px 2px 14px;margin:0 -2px;scrollbar-width:none;}
+.venue-swipe::-webkit-scrollbar{display:none;}
+.venue-card{scroll-snap-align:start;flex:0 0 84%;max-width:340px;background:rgba(6,26,11,0.85);border:1px solid var(--borderg);border-radius:14px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,0.5);}
+@media(min-width:760px){.venue-card{flex-basis:300px;}}
+.venue-photo{position:relative;height:172px;background-size:cover;background-position:center;background-color:#0d3316;}
+.venue-photo-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(6,26,11,0.92));}
+.venue-photo-cap{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;}
+.venue-photo-cap h4{font-family:'Playfair Display';color:var(--ivory);font-size:18px;text-shadow:0 1px 6px rgba(0,0,0,0.9);}
+.venue-dist{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold2);letter-spacing:1px;}
+.venue-tag{position:absolute;top:10px;left:10px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;padding:4px 9px;border-radius:20px;background:rgba(6,26,11,0.85);color:var(--gold2);border:1px solid var(--borderg);}
+.venue-tag.nearest{color:#061a0b;background:var(--green2);border-color:var(--green2);font-weight:700;}
+.venue-tag.open{left:auto;right:52px;color:#061a0b;background:var(--gold2);border-color:var(--gold2);font-weight:700;}
+.venue-fave{position:absolute;top:8px;right:8px;width:34px;height:34px;border-radius:50%;border:none;background:rgba(6,26,11,0.7);backdrop-filter:blur(4px);cursor:pointer;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;}
+.venue-meta{padding:12px 14px 14px;}
+.venue-sub{font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.5;min-height:30px;}
+.venue-actions{display:flex;gap:8px;}
+.vbtn{flex:1;padding:9px;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;border:1px solid var(--borderg);}
+.vbtn-gold{background:rgba(212,160,23,0.15);color:var(--gold2);}
+.vbtn-green{background:rgba(39,174,96,0.15);border-color:rgba(39,174,96,0.4);color:var(--green2);}
+
+/* Game screen — real pool-table backdrop behind the canvas */
+#game-viewport{background-color:#0d3316;background-size:cover;background-position:center;}
+
+/* Community — UGC photo strip + leaderboard */
+.ugc-strip{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;}
+.ugc-strip::-webkit-scrollbar{display:none;}
+.ugc-photo{flex:0 0 120px;height:88px;border-radius:10px;background-size:cover;background-position:center;border:1px solid var(--borderg);position:relative;overflow:hidden;}
+.ugc-photo span{position:absolute;left:0;right:0;bottom:0;padding:4px 7px;font-family:'DM Mono',monospace;font-size:9px;color:var(--ivory);background:linear-gradient(180deg,transparent,rgba(0,0,0,0.85));}
+.lb-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid rgba(30,92,42,0.3);}
+.lb-rank{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold2);width:24px;text-align:center;flex-shrink:0;}
+.lb-av{width:40px;height:40px;border-radius:50%;background-size:cover;background-position:center;border:2px solid var(--borderg);flex-shrink:0;}
+.lb-row.top1 .lb-av{border-color:var(--gold2);} .lb-row.top1 .lb-rank{color:#f0c040;}
+.lb-name{flex:1;font-family:'Playfair Display';color:var(--ivory);font-size:15px;}
+.lb-pts{font-family:'DM Mono',monospace;font-size:12px;color:var(--green2);}
 </style>
 </head>
 <body>
+<div id="app-bg"></div>
 <div id="toast-container" style="position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none;min-width:240px;"></div>
 <div id="app">
   <aside id="sidebar">
@@ -188,12 +241,16 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
 
     <!-- HOME -->
     <div class="screen active" id="screen-home">
-      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Main Room</div><h2>Billiards Buddy</h2></div>
-      <div class="content">
-        <div class="card gold-card" style="padding:16px 18px;">
-          <h3 style="font-family:'Playfair Display';font-size:18px;">Welcome to the Clubhouse</h3>
-          <p style="margin-top:6px;font-size:13px;opacity:0.8;line-height:1.6;">Find venues, track games, analyze shots with live AI, and play 9-ball — all in one app.</p>
+      <div class="glass-overlay">
+      <div class="hero" id="home-hero">
+        <div class="hero-inner">
+          <div class="eyebrow">The Players' Clubhouse</div>
+          <h1>Find your table.<br>Run the room.</h1>
+          <p>Real pool halls near you, live shot coaching, leaderboards, and a community of players — all in one app.</p>
+          <button class="btn btn-gold hero-cta" onclick="showScreen('venues')">&#128205; Find Pool Near Me</button>
         </div>
+      </div>
+      <div class="content">
         <div class="grid-3" style="margin-top:14px;">
           <div class="card clickable" onclick="showScreen('game')" style="text-align:center;padding:20px 10px;border-color:rgba(200,134,10,0.5);background:rgba(212,160,23,0.08);"><div style="font-size:26px;margin-bottom:8px;">&#127921;</div><div style="font-size:11px;color:var(--gold2);font-weight:700;">Play Pool</div></div>
           <div class="card clickable" onclick="showScreen('venues')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#128205;</div><div style="font-size:11px;color:var(--dim)">Venues</div></div>
@@ -359,6 +416,11 @@ body{background:var(--deep);font-family:'Libre Baskerville',Georgia,serif;color:
           <div class="pill" onclick="switchRoom('equipment',this)">Equipment</div>
           <div class="pill" onclick="switchRoom('players',this)">Find Players</div>
         </div>
+        <div style="padding:0 16px 6px;flex-shrink:0;"><div class="eyebrow" style="margin-bottom:8px;">From the Tables</div></div>
+        <div class="ugc-strip" id="ugc-strip"></div>
+        <div style="padding:14px 16px 6px;flex-shrink:0;"><div class="eyebrow">Top Players This Month</div></div>
+        <div id="leaderboard" style="flex-shrink:0;padding:0 6px 10px;"></div>
+        <div style="padding:6px 16px;flex-shrink:0;"><div class="eyebrow">Live Chat</div></div>
         <div id="community-status" style="padding:0 16px 8px;flex-shrink:0;"></div>
         <div id="community-messages"></div>
         <div id="community-input-bar">
@@ -633,12 +695,22 @@ function showToast(msg, type) {
 // ════════════════════════════════════════════════════════
 // NAVIGATION ENGINE
 // ════════════════════════════════════════════════════════
+// Photographic backdrop per screen (falls back to the felt-green base via the gradient overlay).
+function setScreenBackground(id){
+    var bg = document.getElementById('app-bg'); if(!bg) return;
+    var map = { home: IMG.hero, venues: IMG.felt, community: IMG.heroAlt, game: IMG.table,
+                analyzer: IMG.heroAlt, score: IMG.felt, bracket: IMG.felt };
+    var url = map[id] || IMG.felt;
+    bg.style.backgroundImage = "url('" + url + "')";
+}
+
 function showScreen(id) {
     const all = ['home','venues','academy','timer','shop','rules','tips','community','profile','score','bracket','analyzer','game'];
     const prev = all.find(s => { const el=document.getElementById('screen-'+s); return el&&el.classList.contains('active'); });
     all.forEach(s => { const el = document.getElementById('screen-'+s); if(el) el.classList.remove('active'); });
     const t = document.getElementById('screen-'+id);
     if(t) { t.classList.add('active'); window.scrollTo(0,0); }
+    setScreenBackground(id);
     if (id === 'venues' && window._leafletMap) {
         setTimeout(function() { window._leafletMap.invalidateSize(); }, 150);
     }
@@ -724,26 +796,37 @@ function renderVenues(filter){
     const c = document.getElementById('venue-list'); if(!c) return;
     const favs = userProfile.favoriteVenues || [];
     let f = filter==='all' ? VENUES.slice() : VENUES.filter(v=>v.type===filter);
-    if(window._gpsReady) f.sort((a,b)=>(parseFloat(a.dist)||999)-(parseFloat(b.dist)||999));
-    let html = '';
+    if(window._gpsReady) f.sort((a,b)=>((a.distVal!=null?a.distVal:parseFloat(a.dist))||999)-((b.distVal!=null?b.distVal:parseFloat(b.dist))||999));
+    if(!f.length){ c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">No venues in this category yet.</p>'; return; }
+
+    let cards = '';
     f.forEach((v,idx) => {
         const isFav = favs.includes(v.id);
         const nearest = window._gpsReady && idx===0;
-        html += '<div class="card" style="padding:15px;margin-bottom:10px;background:rgba(255,255,255,0.03);'+(nearest?'border-color:rgba(39,174,96,0.6);':'')+'">'
-            +(nearest?'<div style="font-family:\'DM Mono\';font-size:9px;letter-spacing:2px;color:var(--green2);margin-bottom:8px;">&#128205; NEAREST TO YOU</div>':'')
-            + '<div style="display:flex;justify-content:space-between;align-items:center;">'
-            + '<h4 style="font-family:\'Playfair Display\';color:var(--ivory);flex:1;">' + v.name + '</h4>'
-            + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
-            + '<button onclick="toggleFaveVenue(' + v.id + ')" style="background:none;border:none;cursor:pointer;font-size:20px;padding:0;line-height:1;">' + (isFav ? '&#10084;&#65039;' : '&#9825;') + '</button>'
-            + '<button onclick="openVenueMap(\'' + v.name.replace(/'/g,"\\'") + '\',' + (v.lat||0) + ',' + (v.lng||0) + ')" style="background:rgba(212,160,23,0.15);border:1px solid var(--borderg);border-radius:6px;cursor:pointer;font-family:\'DM Mono\';font-size:10px;padding:4px 8px;color:var(--gold);">&#128205; Maps</button>'
-            + '<button onclick="getDirections(' + (v.lat||0) + ',' + (v.lng||0) + ',\'' + v.name.replace(/'/g,"\\'") + '\')" style="background:rgba(39,174,96,0.15);border:1px solid rgba(39,174,96,0.4);border-radius:6px;cursor:pointer;font-family:\'DM Mono\';font-size:10px;padding:4px 8px;color:var(--green2);">&#9193; Directions</button>'
-            + '<span style="color:'+(nearest?'var(--green2)':'var(--gold)')+';font-family:\'DM Mono\';font-size:12px;margin-left:auto;">' + v.dist + '</span>'
-            + '</div></div>'
-            + '<p style="font-size:11px;color:var(--dim);margin:5px 0;">' + (v.features&&v.features.length?v.features.join(' • '):'Pool Hall') + '</p>'
-            + '<div style="font-size:11px;color:var(--gold2);">' + (v.rating?'★ '+v.rating+' — ':'') + (v.tables?v.tables+' Tables':'Pool Hall') + (isFav?' <span style="color:#e74c3c;">❤ Saved</span>':'') + '</div>'
+        const safeName = String(v.name).replace(/'/g,"\\'");
+        const photo = v.photoUrl || stockPhoto(v.id || v.name);
+        const sub = (v.features && v.features.length) ? v.features.join(' • ') : (v.address || 'Pool Hall');
+        cards += '<div class="venue-card">'
+            + '<div class="venue-photo" style="background-image:url(\'' + photo + '\');">'
+            +   (nearest?'<span class="venue-tag nearest">&#128205; Nearest</span>':'')
+            +   (v.openNow===true?'<span class="venue-tag open">Open now</span>':'')
+            +   '<button class="venue-fave" onclick="toggleFaveVenue(' + v.id + ')">' + (isFav ? '&#10084;&#65039;' : '&#9825;') + '</button>'
+            +   '<div class="venue-photo-grad"></div>'
+            +   '<div class="venue-photo-cap">'
+            +     '<div class="venue-dist">' + v.dist + (v.rating?' · ★ '+v.rating:'') + '</div>'
+            +     '<h4>' + v.name + '</h4>'
+            +   '</div>'
+            + '</div>'
+            + '<div class="venue-meta">'
+            +   '<p class="venue-sub">' + sub + '</p>'
+            +   '<div class="venue-actions">'
+            +     '<button class="vbtn vbtn-gold" onclick="openVenueMap(\'' + safeName + '\',' + (v.lat||0) + ',' + (v.lng||0) + ')">&#128205; Map</button>'
+            +     '<button class="vbtn vbtn-green" onclick="getDirections(' + (v.lat||0) + ',' + (v.lng||0) + ',\'' + safeName + '\')">&#9193; Directions</button>'
+            +   '</div>'
+            + '</div>'
             + '</div>';
     });
-    c.innerHTML = html;
+    c.innerHTML = '<div class="venue-swipe-hint">&#128072; Swipe to browse ' + f.length + ' nearby</div><div class="venue-swipe">' + cards + '</div>';
 }
 
 function toggleFaveVenue(id) {
@@ -810,111 +893,105 @@ function updateVenueMapMarkers() {
     });
 }
 
-function fetchNearbyVenues(lat, lng) {
+function hav(la1,lo1,la2,lo2){ var R=3958.8,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2); return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); }
+
+function fetchNearbyVenues(lat, lng, accuracy) {
     var c = document.getElementById('venue-list');
     if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">&#128205; Finding pool tables near you...</p>';
-    function hav(la1,lo1,la2,lo2){ var R=3958.8,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)*Math.sin(dO/2); return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1); }
 
-    var R = 24140; // 15 miles in metres
-    var OV = 'https://overpass-api.de/api/interpreter';
-    var around = '(around:'+R+','+lat+','+lng+')';
+    // GPS-accuracy guard: a coarse (IP-based) fix is the usual cause of "venues 37 mi away".
+    // Warn the user instead of silently measuring everything from the wrong anchor point.
+    if (accuracy && accuracy > 8000) {
+        var locElW = document.getElementById('location-status');
+        if (locElW) { locElW.textContent = 'Approximate location (±' + Math.round(accuracy/1609) + ' mi) — allow precise GPS for nearby halls'; locElW.style.color = 'var(--gold)'; }
+    }
 
-    // Query 1: tag-based — consolidated into fewer union clauses
-    var q1 = '[out:json][timeout:15];('
-        + 'node["sport"~"billiards|pool|snooker"]'+around+';'
-        + 'way["sport"~"billiards|pool|snooker"]'+around+';'
-        + 'node["leisure"~"billiard_hall|pool_table"]'+around+';'
-        + 'way["leisure"="billiard_hall"]'+around+';'
-        + 'node["pool_table"]'+around+';'
-        + 'way["pool_table"]'+around+';'
-        + 'node["billiards"="yes"]'+around+';'
-        + 'way["billiards"="yes"]'+around+';'
-        + ');out center 30;';
-
-    // Query 2: name-based — catches any place that says "billiard/pool hall/snooker" in its name
-    var q2 = '[out:json][timeout:15];('
-        + 'node["name"~"billiard|pool hall|pool room|pool table|snooker|cue club|cue lounge",i]'+around+';'
-        + 'way["name"~"billiard|pool hall|pool room|pool table|snooker|cue club|cue lounge",i]'+around+';'
-        + 'node["amenity"~"bar|pub|nightclub"]["sport"~"billiards|pool|snooker"]'+around+';'
-        + 'way["amenity"~"bar|pub|nightclub"]["sport"~"billiards|pool|snooker"]'+around+';'
-        + 'node["amenity"~"bar|pub|nightclub"]["pool_table"]'+around+';'
-        + 'way["amenity"~"bar|pub|nightclub"]["pool_table"]'+around+';'
-        + ');out center 30;';
-
-    function post(q){ return fetch(OV,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)}).then(function(r){return r.json();}); }
-
-    function categorize(tags, name) {
-        if (tags.leisure === 'billiard_hall') return 'pro';
-        var barAm = {bar:1,pub:1,nightclub:1,biergarten:1,restaurant:1,cafe:1,bowling_alley:1};
-        if (barAm[tags.amenity]) return 'bar';
-        var lname = name.toLowerCase();
-        var barW = ['bar','tavern','lounge','pub','brewery','taproom','saloon','inn','grill','cantina','sports bar'];
-        if (barW.some(function(w){ return lname.indexOf(w)!==-1; })) return 'bar';
+    // ── Google Places via the Cloudflare Worker (API key stays server-side) ──
+    function classifyPlace(types, name) {
+        types = types || [];
+        if (types.indexOf('bar')!==-1 || types.indexOf('night_club')!==-1 || types.indexOf('restaurant')!==-1) return 'bar';
+        var lname = (name||'').toLowerCase();
+        if (['bar','tavern','lounge','pub','brewery','taproom','saloon','grill','cantina'].some(function(w){return lname.indexOf(w)!==-1;})) return 'bar';
         return 'pro';
     }
-    function venueLabel(tags, name) {
-        if (tags.leisure === 'billiard_hall') return 'Billiard Hall';
-        var lm = {bar:'Bar & Pool',pub:'Pub & Pool',nightclub:'Club & Pool',restaurant:'Restaurant',cafe:'Cafe',biergarten:'Beer Garden',bowling_alley:'Bowling & Pool'};
-        if (lm[tags.amenity]) return lm[tags.amenity];
-        var lname = (name||'').toLowerCase();
-        if (lname.indexOf('snooker')!==-1) return 'Snooker Hall';
-        if (lname.indexOf('billiard')!==-1) return 'Billiard Hall';
-        return 'Pool Tables';
+    function fetchProxyVenues(radiusM) {
+        if (!VENUE_PROXY_URL) return Promise.resolve(null); // null = proxy not configured
+        return fetch(VENUE_PROXY_URL, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ lat:lat, lng:lng, radius:radiusM })
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+            if (!d || !d.venues) return [];
+            return d.venues.filter(function(p){ return p.lat && p.lng; }).map(function(p){
+                var dist = hav(lat,lng,p.lat,p.lng);
+                var feats = [];
+                if (p.rating) feats.push('★ ' + p.rating + (p.userRatings?(' ('+p.userRatings+')'):''));
+                if (p.openNow===true) feats.push('Open now');
+                if (p.address) feats.push(p.address);
+                return { id:p.id, name:p.name, type:classifyPlace(p.types,p.name), rating:p.rating||null,
+                         userRatings:p.userRatings||0, tables:null, lat:p.lat, lng:p.lng,
+                         dist:dist.toFixed(1)+' mi', distVal:dist, photoUrl:p.photoUrl||null,
+                         address:p.address||'', openNow:p.openNow, features:feats };
+            });
+        })
+        .catch(function(){ return []; });
     }
-    function parseElements(elements, seen, results) {
-        (elements||[]).forEach(function(el){
-            var tags = el.tags||{};
-            var name = tags.name;
-            if (!name || seen[name]) return;
-            seen[name] = true;
-            var vLat = el.type==='way' ? el.center.lat : el.lat;
-            var vLng = el.type==='way' ? el.center.lon : el.lon;
-            if (!vLat || !vLng) return;
-            var dist = hav(lat, lng, vLat, vLng);
-            var feats = [venueLabel(tags, name)];
-            if (tags['addr:street']) feats.push(tags['addr:street']);
-            if (tags['addr:city']) feats.push(tags['addr:city']);
-            results.push({id:el.id, name:name, type:categorize(tags,name), rating:null, tables:null, lat:vLat, lng:vLng, dist:dist+' mi', features:feats});
+
+    // ── OpenStreetMap / Overpass (free fallback when no proxy or proxy empty) ──
+    function fetchOverpass(radiusM) {
+        var OV = 'https://overpass-api.de/api/interpreter';
+        var around = '(around:'+radiusM+','+lat+','+lng+')';
+        var q1 = '[out:json][timeout:15];('
+            + 'node["sport"~"billiards|pool|snooker"]'+around+';way["sport"~"billiards|pool|snooker"]'+around+';'
+            + 'node["leisure"~"billiard_hall|pool_table"]'+around+';way["leisure"="billiard_hall"]'+around+';'
+            + 'node["pool_table"]'+around+';way["pool_table"]'+around+';'
+            + 'node["billiards"="yes"]'+around+';way["billiards"="yes"]'+around+';);out center 30;';
+        var q2 = '[out:json][timeout:15];('
+            + 'node["name"~"billiard|pool hall|pool room|pool table|snooker|cue club|cue lounge",i]'+around+';'
+            + 'way["name"~"billiard|pool hall|pool room|pool table|snooker|cue club|cue lounge",i]'+around+';'
+            + 'node["amenity"~"bar|pub|nightclub"]["sport"~"billiards|pool|snooker"]'+around+';'
+            + 'way["amenity"~"bar|pub|nightclub"]["sport"~"billiards|pool|snooker"]'+around+';'
+            + 'node["amenity"~"bar|pub|nightclub"]["pool_table"]'+around+';'
+            + 'way["amenity"~"bar|pub|nightclub"]["pool_table"]'+around+';);out center 30;';
+        function post(q){ return fetch(OV,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)}).then(function(r){return r.json();}).catch(function(){return {elements:[]};}); }
+        function categorize(tags, name){ if(tags.leisure==='billiard_hall')return 'pro'; var b={bar:1,pub:1,nightclub:1,biergarten:1,restaurant:1,cafe:1,bowling_alley:1}; if(b[tags.amenity])return 'bar'; var l=(name||'').toLowerCase(); return ['bar','tavern','lounge','pub','brewery','taproom','saloon','grill','cantina'].some(function(w){return l.indexOf(w)!==-1;})?'bar':'pro'; }
+        function label(tags,name){ if(tags.leisure==='billiard_hall')return 'Billiard Hall'; var m={bar:'Bar & Pool',pub:'Pub & Pool',nightclub:'Club & Pool',restaurant:'Restaurant',cafe:'Cafe',bowling_alley:'Bowling & Pool'}; if(m[tags.amenity])return m[tags.amenity]; var l=(name||'').toLowerCase(); if(l.indexOf('snooker')!==-1)return 'Snooker Hall'; if(l.indexOf('billiard')!==-1)return 'Billiard Hall'; return 'Pool Tables'; }
+        return Promise.all([post(q1),post(q2)]).then(function(res){
+            var seen={}, out=[];
+            res.forEach(function(r){ (r.elements||[]).forEach(function(el){
+                var t=el.tags||{}, name=t.name; if(!name||seen[name])return; seen[name]=true;
+                var vLat=el.type==='way'?(el.center&&el.center.lat):el.lat, vLng=el.type==='way'?(el.center&&el.center.lon):el.lon;
+                if(!vLat||!vLng)return;
+                var dist=hav(lat,lng,vLat,vLng), feats=[label(t,name)];
+                if(t['addr:street'])feats.push(t['addr:street']);
+                out.push({id:el.id,name:name,type:categorize(t,name),rating:null,tables:null,lat:vLat,lng:vLng,dist:dist.toFixed(1)+' mi',distVal:dist,photoUrl:null,address:t['addr:street']||'',features:feats});
+            }); });
+            return out;
         });
     }
 
-    function fetchGooglePlaces() {
-        if (!GOOGLE_PLACES_KEY) return Promise.resolve([]);
-        var base = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
-        var params = '?location='+lat+','+lng+'&radius='+R+'&keyword=billiards+pool+hall+snooker&key='+GOOGLE_PLACES_KEY;
-        return fetch(base+params)
-            .then(function(r){ return r.json(); })
-            .then(function(d){
-                return (d.results||[]).map(function(p){
-                    var vLat = p.geometry.location.lat;
-                    var vLng = p.geometry.location.lng;
-                    var dist = hav(lat,lng,vLat,vLng);
-                    return {id:'gp_'+p.place_id, name:p.name, type:'pro', rating:p.rating||null, tables:null,
-                            lat:vLat, lng:vLng, dist:dist+' mi',
-                            features:['Google Places', p.vicinity||''].filter(Boolean)};
-                });
-            })
-            .catch(function(){ return []; });
+    // ── Expanding-radius search: prefer close venues, widen only when sparse ──
+    var STEPS = [3200, 8000, 16000, 40000]; // ~2, 5, 10, 25 miles
+    function searchProxy(i){
+        return fetchProxyVenues(STEPS[i]).then(function(list){
+            if (list === null) return null; // not configured
+            if (list.length >= 3 || i >= STEPS.length-1) return list;
+            return searchProxy(i+1);
+        });
     }
 
-    // Run all queries in parallel
-    Promise.all([
-        post(q1).catch(function(){return {elements:[]};}),
-        post(q2).catch(function(){return {elements:[]};}),
-        fetchGooglePlaces()
-    ])
-    .then(function(responses){
-        var seen = {}, results = [];
-        parseElements(responses[0].elements, seen, results);
-        parseElements(responses[1].elements, seen, results);
-        // Merge Google Places results
-        (responses[2]||[]).forEach(function(v){
-            if (!seen[v.name]) { seen[v.name]=true; results.push(v); }
-        });
-        results.sort(function(a,b){ return parseFloat(a.dist)-parseFloat(b.dist); });
-        VENUES = results.slice(0,8);
-        if (VENUES.length === 0) {
-            if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">No pool tables found within 15 miles.</p>';
+    searchProxy(0)
+    .then(function(list){
+        if (list && list.length) return list;          // Google Places results
+        return fetchOverpass(24140);                    // free fallback within 15 mi
+    })
+    .then(function(list){
+        list = list || [];
+        list.sort(function(a,b){ return (a.distVal||999)-(b.distVal||999); });
+        VENUES = list.slice(0,12);
+        if (!VENUES.length) {
+            if (c) c.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">No pool tables found nearby. Try the Refresh button, or widen your search area.</p>';
         } else {
             renderVenues();
             updateVenueMapMarkers();
@@ -1112,8 +1189,20 @@ function playClockTick(){
 // ════════════════════════════════════════════════════════
 const AMZN_TAG  = 'billiardsbuddy-20';
 const EBAY_CAMP = '5338940929';
-const GOOGLE_PLACES_KEY = ''; // Paste your Google Places API key here for richer venue results
-const AI_PROXY_URL = ''; // Paste your Cloudflare Worker URL here (e.g. https://bb-ai.yourname.workers.dev)
+const AI_PROXY_URL = ''; // Cloudflare Worker root URL (e.g. https://bb-ai.yourname.workers.dev) — AI shot coaching
+const VENUE_PROXY_URL = ''; // Same Worker + /venues (e.g. https://bb-ai.yourname.workers.dev/venues) — real pool-hall search via Google Places.
+                            // Leave blank to fall back to free OpenStreetMap/Overpass data (sparser, no photos).
+// Curated, free-to-use pool imagery (Pexels — verified). Used as fallbacks when a venue has no real photo.
+function pexels(id, w){ return 'https://images.pexels.com/photos/' + id + '/pexels-photo-' + id + '.jpeg?auto=compress&cs=tinysrgb&w=' + (w||800); }
+const IMG = {
+  hero:      pexels(7403855, 1200), // man playing in a dark hall — home hero
+  heroAlt:   pexels(18991743, 1200),// neon shot
+  table:     pexels(7403820, 1200), // blue table, racked — game background
+  felt:      pexels(10627133, 1200),// cue ball on felt
+  community: [pexels(7404545,600), pexels(7403855,600), pexels(18991743,600), pexels(15473886,600), pexels(6253975,600)]
+};
+const STOCK_POOL_PHOTOS = [pexels(6253975), pexels(6253989), pexels(15473886), pexels(7403820), pexels(10627133)];
+function stockPhoto(seed){ var s = Math.abs((String(seed)||'').split('').reduce(function(a,c){return a*31+c.charCodeAt(0)|0;},7)); return STOCK_POOL_PHOTOS[s % STOCK_POOL_PHOTOS.length]; }
 
 function amzn(q){ return 'https://www.amazon.com/s?k='+encodeURIComponent(q)+'&tag='+AMZN_TAG; }
 function ebay(q){ return 'https://rover.ebay.com/rover/1/711-53200-19255-0/1?toolid=10001&campid='+EBAY_CAMP+'&customid=&mpre='+encodeURIComponent('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(q)); }
@@ -1452,7 +1541,40 @@ var _communityRoom = 'general';
 var _communityRef = null;
 var _lastMsgTime = 0;
 
+// Avatar generator (free, deterministic, CORS-friendly).
+function avatarUrl(seed){ return 'https://api.dicebear.com/9.x/thumbs/svg?seed=' + encodeURIComponent(seed||'player') + '&backgroundColor=0d3316,14471f,1a5c2a'; }
+
+// UGC photo strip + monthly leaderboard. Renders independently of chat connection.
+function renderCommunityShowcase(){
+    var strip = document.getElementById('ugc-strip');
+    if (strip) {
+        var caps = ['@cuemaster · Friday league','@bankshot_bri · 9-ball night','@neon_nine · downtown hall','@rackem · break & run','@feltqueen · perfect safety'];
+        strip.innerHTML = IMG.community.map(function(url,i){
+            return '<div class="ugc-photo" style="background-image:url(\'' + url + '\');"><span>' + caps[i % caps.length] + '</span></div>';
+        }).join('');
+    }
+    var lb = document.getElementById('leaderboard');
+    if (lb) {
+        var players = [
+            { name:'Jake "The Rail" R.', pts:2480 },
+            { name:'Mia Park', pts:2310 },
+            { name:'Coach Delgado', pts:2155 },
+            { name:(userProfile.name || 'You'), pts:(1200 + (userProfile.stats && userProfile.stats.gamesWon ? userProfile.stats.gamesWon*45 : 0)), you:true },
+            { name:'Sticks Malone', pts:1080 }
+        ].sort(function(a,b){ return b.pts - a.pts; });
+        lb.innerHTML = players.map(function(p,i){
+            return '<div class="lb-row' + (i===0?' top1':'') + (p.you?' you':'') + '">'
+                + '<div class="lb-rank">' + (i+1) + '</div>'
+                + '<div class="lb-av" style="background-image:url(\'' + avatarUrl(p.name) + '\');"></div>'
+                + '<div class="lb-name">' + p.name + (p.you?' <span style="font-family:\'DM Mono\';font-size:9px;color:var(--gold2);">YOU</span>':'') + '</div>'
+                + '<div class="lb-pts">' + p.pts.toLocaleString() + ' pts</div>'
+                + '</div>';
+        }).join('');
+    }
+}
+
 function initCommunity() {
+    renderCommunityShowcase();
     if (!FIREBASE_CONFIG) { showCommunitySetup(); return; }
     if (_fbApp) { listenRoom(_communityRoom); return; }
     try {
@@ -2356,7 +2478,7 @@ function mpGeoSuccess(pos, locEl) {
     userProfile.lastLng = lng;
     saveProfile();
     updateVenueMap(lat, lng);
-    fetchNearbyVenues(lat, lng);
+    fetchNearbyVenues(lat, lng, acc);
     fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json')
         .then(function(r){ return r.json(); })
         .then(function(d){
@@ -2382,6 +2504,10 @@ function mpGeoError(err, locEl) {
 // ════════════════════════════════════════════════════════
 window.onload = function() {
     updateProfileUI(); renderVenues(); renderLessons(); renderProducts(); renderRules(); renderTips(); loadCart();
+    // Wire up the photographic visuals
+    setScreenBackground('home');
+    var hero = document.getElementById('home-hero'); if (hero) hero.style.backgroundImage = "url('" + IMG.hero + "')";
+    var gv = document.getElementById('game-viewport'); if (gv) { gv.style.backgroundImage = "url('" + IMG.table + "')"; }
     const locEl = document.getElementById('location-status');
     var isSecure = window.location.protocol === 'https:'
         || window.location.hostname === 'localhost'
