@@ -1,11 +1,13 @@
 // ============================================================
-// Billiards Buddy — Service Worker  v9.2
-// Cache: bb-cache-v2
+// Billiards Buddy — Service Worker  v10.0
+// Cache: bb-cache-v6
 // Strategy: cache-first for same-origin; network passthrough
 //           for YouTube, Nominatim, Google Maps, Google Fonts.
+// Bump CACHE_NAME on every release so clients re-fetch index.html
+// and the old cache is purged on activate.
 // ============================================================
 
-const CACHE_NAME = 'bb-cache-v5';
+const CACHE_NAME = 'bb-cache-v6';
 
 const PRECACHE_URLS = [
   './',
@@ -82,7 +84,27 @@ self.addEventListener('fetch', function(event) {
   // Non-GET requests go straight to network
   if (event.request.method !== 'GET') return;
 
-  // Cache-first with background revalidation for same-origin GET
+  // HTML / navigations: network-first so new releases apply immediately.
+  // Falls back to the cached copy only when offline.
+  var accept = event.request.headers.get('accept') || '';
+  if (event.request.mode === 'navigate' || accept.indexOf('text/html') !== -1) {
+    event.respondWith(
+      fetch(event.request).then(function(response) {
+        if (response && response.status === 200 && response.type !== 'opaque') {
+          var copy = response.clone();
+          caches.open(CACHE_NAME).then(function(cache) { cache.put(event.request, copy); });
+        }
+        return response;
+      }).catch(function() {
+        return caches.match(event.request).then(function(cached) {
+          return cached || caches.match('./index.html');
+        });
+      })
+    );
+    return;
+  }
+
+  // Cache-first with background revalidation for other same-origin GET (assets)
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       // Background revalidation (fire-and-forget)
