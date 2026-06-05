@@ -698,9 +698,14 @@ function showToast(msg, type) {
 // Photographic backdrop per screen (falls back to the felt-green base via the gradient overlay).
 function setScreenBackground(id){
     var bg = document.getElementById('app-bg'); if(!bg) return;
-    var map = { home: IMG.hero, venues: IMG.felt, community: IMG.heroAlt, game: IMG.table,
-                analyzer: IMG.heroAlt, score: IMG.felt, bracket: IMG.felt };
-    var url = map[id] || IMG.felt;
+    var entry = SCREEN_BG[id] || SCREEN_BG.home;
+    var url;
+    if (Array.isArray(entry)) {            // venues: rotate through interiors on each visit
+        url = entry[(window._venueBgIdx||0) % entry.length];
+        window._venueBgIdx = (window._venueBgIdx||0) + 1;
+    } else {
+        url = entry;
+    }
     bg.style.backgroundImage = "url('" + url + "')";
 }
 
@@ -1192,14 +1197,29 @@ const EBAY_CAMP = '5338940929';
 const AI_PROXY_URL = ''; // Cloudflare Worker root URL (e.g. https://bb-ai.yourname.workers.dev) — AI shot coaching
 const VENUE_PROXY_URL = ''; // Same Worker + /venues (e.g. https://bb-ai.yourname.workers.dev/venues) — real pool-hall search via Google Places.
                             // Leave blank to fall back to free OpenStreetMap/Overpass data (sparser, no photos).
-// Curated, free-to-use pool imagery (Pexels — verified). Used as fallbacks when a venue has no real photo.
+// Curated, free-to-use pool imagery (Pexels — every ID HTTP-checked and eyeballed).
 function pexels(id, w){ return 'https://images.pexels.com/photos/' + id + '/pexels-photo-' + id + '.jpeg?auto=compress&cs=tinysrgb&w=' + (w||800); }
+// Distinct full-bleed backdrop per section so each screen feels its own place.
+const SCREEN_BG = {
+  home:     pexels(7403959,1400),  // wide hall, group of friends playing
+  venues:   [pexels(4109685,1400), pexels(10627141,1400), pexels(13638986,1400), pexels(12730844,1400)], // rotating venue interiors
+  rules:    pexels(13036109,1400), // classic green-baize / tournament
+  shop:     pexels(37063421,1400), // cue + equipment laid on the table
+  timer:    pexels(27666395,1400), // tense low-light match moment
+  bracket:  pexels(10627141,1400), // tournament hall with many tables
+  score:    pexels(6532362,1400),  // gold trophy
+  academy:  pexels(5055269,1400),  // hands on the cue — instructional
+  community:pexels(7404672,1400),  // player hanging out with a cue
+  tips:     pexels(27964953,1400), // ball + cue technique close-up
+  analyzer: pexels(35512599,1400), // lining up a shot
+  profile:  pexels(7404545,1400),  // single player portrait
+  game:     pexels(7403820,1400)   // blue racked table (also the game viewport)
+};
 const IMG = {
-  hero:      pexels(7403855, 1200), // man playing in a dark hall — home hero
-  heroAlt:   pexels(18991743, 1200),// neon shot
-  table:     pexels(7403820, 1200), // blue table, racked — game background
-  felt:      pexels(10627133, 1200),// cue ball on felt
-  community: [pexels(7404545,600), pexels(7403855,600), pexels(18991743,600), pexels(15473886,600), pexels(6253975,600)]
+  hero: SCREEN_BG.home,
+  table: SCREEN_BG.game,
+  // UGC strip thumbnails (people-focused)
+  community: [pexels(7403959,600), pexels(7404672,600), pexels(10627141,600), pexels(7404545,600), pexels(6253975,600)]
 };
 const STOCK_POOL_PHOTOS = [pexels(6253975), pexels(6253989), pexels(15473886), pexels(7403820), pexels(10627133)];
 function stockPhoto(seed){ var s = Math.abs((String(seed)||'').split('').reduce(function(a,c){return a*31+c.charCodeAt(0)|0;},7)); return STOCK_POOL_PHOTOS[s % STOCK_POOL_PHOTOS.length]; }
@@ -2505,8 +2525,9 @@ function mpGeoError(err, locEl) {
 window.onload = function() {
     updateProfileUI(); renderVenues(); renderLessons(); renderProducts(); renderRules(); renderTips(); loadCart();
     // Wire up the photographic visuals
+    // Home shows a single full-bleed image via #app-bg; the hero is just text + gradient
+    // over it (no separate hero background — that caused the duplicate/“tiled” look).
     setScreenBackground('home');
-    var hero = document.getElementById('home-hero'); if (hero) hero.style.backgroundImage = "url('" + IMG.hero + "')";
     var gv = document.getElementById('game-viewport'); if (gv) { gv.style.backgroundImage = "url('" + IMG.table + "')"; }
     const locEl = document.getElementById('location-status');
     var isSecure = window.location.protocol === 'https:'
