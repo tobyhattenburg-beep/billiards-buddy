@@ -56,7 +56,11 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
 #cues-modal,#career-modal{position:absolute; inset:0; z-index:10; display:flex; align-items:center; justify-content:center; background:rgba(4,6,12,0.95); backdrop-filter:blur(7px); padding:18px;}
 #cues-panel{background:#0a0f1c; border:1px solid var(--cyan-dim); border-radius:16px; padding:18px; max-width:780px; width:100%; max-height:88vh; overflow:auto; box-shadow:0 0 40px rgba(54,230,255,0.25);}
 #cues-panel h2{font-family:'Orbitron'; margin:0; letter-spacing:2px; color:#fff;}
-#cues-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:12px; margin-top:14px;}
+#cues-grid,#balls-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(212px,1fr)); gap:12px; margin-top:10px;}
+.shop-h{font-family:'Orbitron'; font-size:13px; letter-spacing:2px; color:var(--cyan); margin:18px 0 0; text-transform:uppercase;}
+.cue-card.buyable{cursor:pointer; border-color:rgba(255,210,74,0.4);} .cue-card.buyable:hover{border-color:var(--gold); box-shadow:0 0 16px rgba(255,210,74,0.25);}
+.cue-status.buy{color:#1a1205; background:linear-gradient(135deg,var(--gold),#ffe79a); border-radius:10px; padding:2px 8px;}
+.ball-sw{display:flex; gap:5px; margin:9px 0 8px;} .ball-sw>i{width:18px; height:18px; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.6);}
 .cue-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; position:relative;}
 .cue-card.owned{cursor:pointer;} .cue-card.owned:hover{border-color:var(--cyan);}
 .cue-card.equipped{border-color:var(--gold); box-shadow:0 0 16px rgba(255,210,74,0.3);}
@@ -119,7 +123,7 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
   <div class="hud" id="topright">
     <button class="btn" id="view-btn">👁 Orbit</button>
     <button class="btn" id="career-btn">🏆 Career</button>
-    <button class="btn" id="cues-btn">🎱 Cues</button>
+    <button class="btn" id="cues-btn">🛒 Shop</button>
     <button class="btn" id="new-btn">↻ New</button>
     <div id="ai-bubble" class="hidden"></div>
   </div>
@@ -134,9 +138,14 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
   <div id="message" class="hidden"><div id="msg-title"></div><div id="msg-sub"></div><button class="btn btn-gold" id="msg-btn">Play Again</button></div>
 
   <div id="cues-modal" class="hidden"><div id="cues-panel">
-    <div style="display:flex;justify-content:space-between;align-items:center;"><h2>CUE&nbsp;RACK</h2><button class="btn" id="cues-close">Close</button></div>
-    <p style="color:var(--dim);font-size:13px;margin:6px 0 0;">Win cues by leveling up. Each plays differently — tap an unlocked cue to equip.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;"><h2>PRO&nbsp;SHOP</h2>
+      <div style="display:flex;align-items:center;gap:12px;"><span id="shop-cash" style="font-family:'Orbitron';color:var(--gold);font-weight:700;">$0</span><button class="btn" id="cues-close">Close</button></div>
+    </div>
+    <p style="color:var(--dim);font-size:13px;margin:6px 0 0;">Spend cash you win in Career on better cues and ball sets. Tap to buy, then it equips — tap an owned item to switch.</p>
+    <h3 class="shop-h">Cues</h3>
     <div id="cues-grid"></div>
+    <h3 class="shop-h">Ball Sets</h3>
+    <div id="balls-grid"></div>
   </div></div>
 
   <div id="career-modal" class="hidden"><div id="career-panel">

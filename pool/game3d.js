@@ -29,34 +29,43 @@ var CHARACTERS=[
  {id:'nova',name:'Nova Rey',avatar:'🌟',difficulty:0.85,taunts:{think:["Stardust and angles."],miss:["A cosmic fluke."],scratch:["Down the wormhole."],score:["Supernova!"],slow:["Shine or step aside."],win:["I burn brightest."],lose:["A new star rises."]}}
 ];
 
-// ---- Cues (level unlocks) ----
+// ---- Cues (bought with cash earned in career) ----
 var CUES=[
- {id:'ash',name:'Ash Classic',unlock:1,traits:{power:1.0,spin:1.0,assist:1},shaft:'#d9b271',glow:'rgba(217,178,113,0.6)',desc:'Balanced all-rounder.'},
- {id:'viper',name:'Neon Viper',unlock:2,traits:{power:0.95,spin:1.3,assist:1},shaft:'#39e08a',glow:'rgba(57,224,138,0.85)',desc:'Whippy — heavy English & draw.'},
- {id:'sledge',name:'Sledgehammer',unlock:3,traits:{power:1.25,spin:0.8,assist:1},shaft:'#ff5a5a',glow:'rgba(255,90,90,0.85)',desc:'Brutal break power, less fine spin.'},
- {id:'laser',name:'Laser Sight',unlock:4,traits:{power:1.0,spin:1.0,assist:2},shaft:'#36e6ff',glow:'rgba(54,230,255,0.9)',desc:'Optics — full object-ball path.'},
- {id:'gold',name:'Gold Standard',unlock:6,traits:{power:1.1,spin:1.15,assist:1},shaft:'#ffd24a',glow:'rgba(255,210,74,0.9)',desc:'More power AND spin.'},
- {id:'phantom',name:'The Phantom',unlock:8,traits:{power:1.05,spin:1.4,assist:2},shaft:'#b06bff',glow:'rgba(176,107,255,0.9)',desc:'Elite spin + optics.'},
- {id:'excalibur',name:'Excalibur',unlock:10,traits:{power:1.2,spin:1.25,assist:2},shaft:'#ffffff',glow:'rgba(255,255,255,0.95)',desc:'The legendary cue.'}
+ {id:'ash',name:'Ash Classic',price:0,traits:{power:1.0,spin:1.0,assist:1},shaft:'#d9b271',glow:'rgba(217,178,113,0.6)',desc:'Balanced all-rounder.'},
+ {id:'viper',name:'Neon Viper',price:250,traits:{power:0.95,spin:1.3,assist:1},shaft:'#39e08a',glow:'rgba(57,224,138,0.85)',desc:'Whippy — heavy English & draw.'},
+ {id:'sledge',name:'Sledgehammer',price:500,traits:{power:1.25,spin:0.8,assist:1},shaft:'#ff5a5a',glow:'rgba(255,90,90,0.85)',desc:'Brutal break power, less fine spin.'},
+ {id:'laser',name:'Laser Sight',price:900,traits:{power:1.0,spin:1.0,assist:2},shaft:'#36e6ff',glow:'rgba(54,230,255,0.9)',desc:'Optics — full object-ball path.'},
+ {id:'gold',name:'Gold Standard',price:1500,traits:{power:1.1,spin:1.15,assist:1},shaft:'#ffd24a',glow:'rgba(255,210,74,0.9)',desc:'More power AND spin.'},
+ {id:'phantom',name:'The Phantom',price:2600,traits:{power:1.05,spin:1.4,assist:2},shaft:'#b06bff',glow:'rgba(176,107,255,0.9)',desc:'Elite spin + optics.'},
+ {id:'excalibur',name:'Excalibur',price:4500,traits:{power:1.2,spin:1.25,assist:2},shaft:'#ffffff',glow:'rgba(255,255,255,0.95)',desc:'The legendary cue.'}
 ];
 
-// ---- Venues (career swaps the 3D environment) ----
+// ---- Ball sets (bought with cash; recolor/refinish the balls) ----
+var BALLS=[
+ {id:'classic',name:'Classic',price:0,cue:'#f5f0e2',cols:['#f3eedd','#ffcf2e','#1f6fff','#ff3b30','#a64dff','#ff8a1e','#1fc16b','#8a1f1f','#1a1a22'],fin:{roughness:0.04,metalness:0,clearcoat:1,cc:0.04,env:1.1},desc:'Tournament standard.'},
+ {id:'neon',name:'Neon Glow',price:350,cue:'#eafcff',cols:['#eafcff','#f5ff3d','#36a2ff','#ff4dd2','#b06bff','#ff9e3d','#39e08a','#ff5a5a','#10141b'],fin:{roughness:0.02,metalness:0,clearcoat:1,cc:0.02,env:1.5},desc:'Electric arcade colours.'},
+ {id:'sunset',name:'Sunset Marble',price:700,cue:'#fff4e6',cols:['#fff4e6','#f6b042','#3d6e9e','#d9492f','#8a5cc4','#e07a2e','#3f9e6b','#7a2f2f','#241a14'],fin:{roughness:0.18,metalness:0.05,clearcoat:0.7,cc:0.15,env:0.8},desc:'Warm matte stone.'},
+ {id:'goldbar',name:'Gold Bullion',price:1400,cue:'#fff7df',cols:['#fff7df','#ffd24a','#caa23a','#b9892e','#e7c453','#d4a017','#f0c040','#8a6b1e','#1a1407'],fin:{roughness:0.12,metalness:0.85,clearcoat:1,cc:0.06,env:1.3},desc:'High-roller metallic gold.'}
+];
+function curBalls(){ for(var i=0;i<BALLS.length;i++) if(BALLS[i].id===PLAYER.ball) return BALLS[i]; return BALLS[0]; }
+
+// ---- Venues (career swaps the 3D environment) — roadmap progression ----
 var VENUES={
- basement:{name:'The Basement', felt:0x0b5a2a, rail:0x3a2410, light:0xffe6bc, bg:0x0a0c08, bokeh:[0xffd24a,0x8a6b2e,0xc89a3a], amb:0.34, exp:1.0},
- lounge:{name:'Neon Lounge', felt:0x0c2b52, rail:0x2a1a0e, light:0xfff2d6, bg:0x06080e, bokeh:[0x36e6ff,0xff3df0,0xffd24a,0xffffff], amb:0.28, exp:1.05},
- velvet:{name:'The Velvet Room', felt:0x5a1530, rail:0x4a3208, light:0xffd9b0, bg:0x140509, bokeh:[0xff5a7a,0xffd24a,0xff9e3d], amb:0.30, exp:1.05},
+ hall:{name:'The Corner Pocket', felt:0x0b5a2a, rail:0x3a2410, light:0xffe6bc, bg:0x0a0c08, bokeh:[0xffd24a,0x8a6b2e,0xc89a3a], amb:0.34, exp:1.0},
+ tiki:{name:'Beachside Tiki Bar', felt:0x0e8f8a, rail:0x6b3f1a, light:0xffd9a0, bg:0x10242e, bokeh:[0xff9e3d,0xffd24a,0x36e6ff,0x39e08a], amb:0.40, exp:1.08},
+ summit:{name:'Mountain Overlook', felt:0x123a5a, rail:0x2a2e36, light:0xcfe0ff, bg:0x05070f, bokeh:[0xffffff,0x9fd0ff,0xcfe0ff], amb:0.30, exp:1.05},
+ lounge:{name:'The Velvet Lounge', felt:0x5a1530, rail:0x4a3208, light:0xffd9b0, bg:0x140509, bokeh:[0xff5a7a,0xffd24a,0xff9e3d], amb:0.30, exp:1.06},
  arena:{name:'Tournament Arena', felt:0x10407a, rail:0x1c1c20, light:0xffffff, bg:0x080a12, bokeh:[0xffffff,0x9fd0ff,0xffe0a0], amb:0.5, exp:1.12},
- skyline:{name:'Sky Lounge', felt:0x123048, rail:0x1a1a22, light:0xcfe0ff, bg:0x05070f, bokeh:[0x36e6ff,0xffffff,0xff9e3d], amb:0.30, exp:1.05},
  vault:{name:'The Vault', felt:0x1c1407, rail:0x0a0a0a, light:0xffd24a, bg:0x080604, bokeh:[0xffd24a,0xffffff,0xc8a83a], amb:0.24, exp:1.12}
 };
-// ---- Career ladder ----
+// ---- Career ladder (pool hall → beach tiki → mountain → luxury lounge → arena → vault) ----
 var CAREER=[
- {venue:'basement', opponents:['rookie','tank'],  reward:200},
- {venue:'lounge',   opponents:['lola','vegas'],   reward:400},
- {venue:'velvet',   opponents:['doc','duchess'],  reward:750},
- {venue:'arena',    opponents:['shark','zen'],    reward:1300},
- {venue:'skyline',  opponents:['nova','ghost'],   reward:2200},
- {venue:'vault',    opponents:['champ'],          reward:5000}
+ {venue:'hall',    opponents:['rookie','tank'],  reward:200},
+ {venue:'tiki',    opponents:['lola','vegas'],   reward:400},
+ {venue:'summit',  opponents:['doc','duchess'],  reward:750},
+ {venue:'lounge',  opponents:['shark','zen'],    reward:1300},
+ {venue:'arena',   opponents:['nova','ghost'],   reward:2200},
+ {venue:'vault',   opponents:['champ'],          reward:5000}
 ];
 function charById(id){ for(var i=0;i<CHARACTERS.length;i++) if(CHARACTERS[i].id===id) return CHARACTERS[i]; return CHARACTERS[0]; }
 
@@ -88,7 +97,7 @@ function initThree(){
   R3.env=makeEnv();
   sc.environment=R3.env;
   buildBokeh(); buildLamp(); buildLights(); buildTable(); buildCue(); buildAimAids();
-  applyVenue('lounge');
+  applyVenue('hall');
   window.addEventListener('resize',onResize);
 }
 function onResize(){ if(!R3.renderer)return; R3.renderer.setSize(vw(),vh(),false); R3.camera.aspect=vw()/vh(); R3.camera.updateProjectionMatrix(); }
@@ -181,18 +190,18 @@ function applyVenue(name){ R3.venue=name; var v=VENUES[name]||VENUES.lounge;
 
 // ---- ball meshes ----
 function ballTex(n){ var c=document.createElement('canvas'); c.width=256; c.height=128; var x=c.getContext('2d');
-  var cols=['#f3eedd','#ffcf2e','#1f6fff','#ff3b30','#a64dff','#ff8a1e','#1fc16b','#8a1f1f','#1a1a22']; var col=n<=8?cols[n]:cols[n-8];
+  var set=curBalls(), cols=set.cols, stripe=set.cols[0]; var col=n<=8?cols[n]:cols[n-8];
   function disc(cx){ if(n===0)return; x.fillStyle='#fff'; x.beginPath(); x.arc(cx,64,22,0,7); x.fill(); x.fillStyle='#141414'; x.font='bold 26px Arial'; x.textAlign='center'; x.textBaseline='middle'; x.fillText(n,cx,65); }
-  if(n===0){ x.fillStyle='#f5f0e2'; x.fillRect(0,0,256,128); }
-  else if(n>8){ x.fillStyle='#f3eedd'; x.fillRect(0,0,256,128); x.fillStyle=col; x.fillRect(0,40,256,48); disc(64); disc(192); }
+  if(n===0){ x.fillStyle=set.cue; x.fillRect(0,0,256,128); }
+  else if(n>8){ x.fillStyle=stripe; x.fillRect(0,0,256,128); x.fillStyle=col; x.fillRect(0,40,256,48); disc(64); disc(192); }
   else { x.fillStyle=col; x.fillRect(0,0,256,128); disc(64); disc(192); }
   var t=new THREE.CanvasTexture(c); t.encoding=THREE.sRGBEncoding; t.anisotropy=4; return t;
 }
 function buildBallMeshes(){
   if(R3.balls) R3.balls.forEach(function(m){ R3.scene.remove(m); });
-  R3.balls=[];
+  R3.balls=[]; var f=curBalls().fin;
   G.balls.forEach(function(b){
-    var m=new THREE.Mesh(new THREE.SphereGeometry(BR,40,28), new THREE.MeshPhysicalMaterial({map:ballTex(b.n),roughness:0.04,metalness:0,clearcoat:1,clearcoatRoughness:0.04,envMap:R3.env,envMapIntensity:1.1}));
+    var m=new THREE.Mesh(new THREE.SphereGeometry(BR,40,28), new THREE.MeshPhysicalMaterial({map:ballTex(b.n),roughness:f.roughness,metalness:f.metalness,clearcoat:f.clearcoat,clearcoatRoughness:f.cc,envMap:R3.env,envMapIntensity:f.env}));
     m.castShadow=true; m.position.set(b.x,BR,b.z); b.mesh=m; R3.balls.push(m); R3.scene.add(m);
   });
 }
@@ -450,11 +459,12 @@ function drawSpinDial(){ var c=document.getElementById('spin'),x=c.getContext('2
 function loadPlayer(){ var p; try{ p=JSON.parse(localStorage.getItem('cueSharks3d')); }catch(e){}
   if(!p||!p.unlocked||!p.unlocked.length) p={xp:0,level:1,cue:'ash',unlocked:['ash']};
   if(!p.career) p.career={beaten:{},cash:0,done:{}};
+  if(!p.ball) p.ball='classic';
+  if(!p.ownedBalls||!p.ownedBalls.length) p.ownedBalls=['classic'];
   return p; }
 function savePlayer(){ try{ localStorage.setItem('cueSharks3d',JSON.stringify(PLAYER)); }catch(e){} }
 function levelInfo(xp){ var lvl=1,need=100,acc=0; while(xp>=acc+need){ acc+=need; lvl++; need=100+(lvl-1)*60; } return {level:lvl,into:xp-acc,need:need}; }
-function addXp(n){ if(n<=0)return; var before=levelInfo(PLAYER.xp).level; PLAYER.xp+=n; var info=levelInfo(PLAYER.xp); PLAYER.level=info.level;
-  if(info.level>before) CUES.forEach(function(c){ if(c.unlock>before&&c.unlock<=info.level&&PLAYER.unlocked.indexOf(c.id)<0){ PLAYER.unlocked.push(c.id); unlockToast(c); } });
+function addXp(n){ if(n<=0)return; PLAYER.xp+=n; PLAYER.level=levelInfo(PLAYER.xp).level;
   savePlayer(); renderLevel(); }
 function renderLevel(){ var info=levelInfo(PLAYER.xp); document.getElementById('lvl').textContent='Lv '+info.level;
   document.getElementById('xp-fill').style.width=Math.round(info.into/info.need*100)+'%'; document.getElementById('xp-text').textContent=info.into+'/'+info.need; }
@@ -462,14 +472,52 @@ function unlockToast(c){ var t=document.getElementById('unlock-toast'); t.innerH
 function openCues(){ renderCues(); document.getElementById('cues-modal').classList.remove('hidden'); }
 function closeCues(){ document.getElementById('cues-modal').classList.add('hidden'); }
 function tbar(l,v,c){ var p=Math.max(8,Math.min(100,Math.round(v/1.4*100))); return '<div class="trait"><span>'+l+'</span><div class="trait-bar"><span style="width:'+p+'%;background:'+c+'"></span></div></div>'; }
-function renderCues(){ var grid=document.getElementById('cues-grid'); grid.innerHTML='';
-  CUES.forEach(function(c){ var owned=PLAYER.unlocked.indexOf(c.id)>=0, eq=PLAYER.cue===c.id, card=document.createElement('div');
-    card.className='cue-card '+(eq?'equipped':(owned?'owned':'locked'));
-    card.innerHTML=(eq?'<span class="cue-status eq">Equipped</span>':(owned?'<span class="cue-status ok">Tap to equip</span>':'<span class="cue-status lk">Lv '+c.unlock+'</span>'))+
+function buyFx(t){ var el=document.getElementById('unlock-toast'); if(!el)return; el.innerHTML=t; el.classList.remove('hidden'); clearTimeout(buyFx._t); buyFx._t=setTimeout(function(){ el.classList.add('hidden'); },2400); }
+function statusTag(eq,owned,afford,price){
+  return eq?'<span class="cue-status eq">Equipped</span>'
+    : owned?'<span class="cue-status ok">Tap to equip</span>'
+    : afford?'<span class="cue-status buy">Buy $'+price+'</span>'
+    : '<span class="cue-status lk">$'+price+'</span>';
+}
+function renderCues(){
+  var cashEl=document.getElementById('shop-cash'); if(cashEl) cashEl.textContent='$'+PLAYER.career.cash;
+  // --- Cues ---
+  var grid=document.getElementById('cues-grid'); grid.innerHTML='';
+  CUES.forEach(function(c){
+    var owned=PLAYER.unlocked.indexOf(c.id)>=0, eq=PLAYER.cue===c.id, afford=PLAYER.career.cash>=c.price;
+    var card=document.createElement('div');
+    card.className='cue-card '+(eq?'equipped':(owned?'owned':(afford?'buyable':'locked')));
+    card.innerHTML=statusTag(eq,owned,afford,c.price)+
       '<div class="cue-name">'+c.name+'</div><div class="cue-rod" style="background:linear-gradient(90deg,#2a3550,'+c.shaft+');box-shadow:0 0 10px '+c.glow+'"></div>'+
       '<div class="cue-desc">'+c.desc+'</div>'+tbar('Power',c.traits.power,'var(--red)')+tbar('Spin',c.traits.spin,'var(--green)')+tbar('Optics',c.traits.assist/2,'var(--cyan)');
-    if(owned&&!eq) card.addEventListener('click',function(){ PLAYER.cue=c.id; savePlayer(); renderCues(); });
-    grid.appendChild(card); });
+    card.addEventListener('click',function(){
+      if(eq) return;
+      if(owned){ PLAYER.cue=c.id; }
+      else { if(PLAYER.career.cash<c.price){ buyFx('💸 Not enough cash<small>'+c.name+' costs $'+c.price+'</small>'); return; }
+             PLAYER.career.cash-=c.price; PLAYER.unlocked.push(c.id); PLAYER.cue=c.id; updateCash(); buyFx('🎉 '+c.name+' bought &amp; equipped'); }
+      savePlayer(); renderCues();
+    });
+    grid.appendChild(card);
+  });
+  // --- Ball sets ---
+  var bg=document.getElementById('balls-grid'); if(!bg) return; bg.innerHTML='';
+  BALLS.forEach(function(s){
+    var owned=PLAYER.ownedBalls.indexOf(s.id)>=0, eq=PLAYER.ball===s.id, afford=PLAYER.career.cash>=s.price;
+    var sw=s.cols.slice(1,7).map(function(col){ return '<i style="background:'+col+'"></i>'; }).join('');
+    var card=document.createElement('div');
+    card.className='cue-card '+(eq?'equipped':(owned?'owned':(afford?'buyable':'locked')));
+    card.innerHTML=statusTag(eq,owned,afford,s.price)+
+      '<div class="cue-name">'+s.name+'</div><div class="ball-sw"><i style="background:'+s.cue+';border:1px solid #888"></i>'+sw+'</div>'+
+      '<div class="cue-desc">'+s.desc+'</div>';
+    card.addEventListener('click',function(){
+      if(eq) return;
+      if(owned){ PLAYER.ball=s.id; }
+      else { if(PLAYER.career.cash<s.price){ buyFx('💸 Not enough cash<small>'+s.name+' costs $'+s.price+'</small>'); return; }
+             PLAYER.career.cash-=s.price; PLAYER.ownedBalls.push(s.id); PLAYER.ball=s.id; updateCash(); buyFx('🎉 '+s.name+' bought &amp; equipped'); }
+      savePlayer(); buildBallMeshes(); renderCues();
+    });
+    bg.appendChild(card);
+  });
 }
 
 // ---- career ----
