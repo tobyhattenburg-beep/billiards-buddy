@@ -5,7 +5,13 @@
 
 // ---- Table / physics constants (world units) ----
 var HX=2.0, HZ=1.0, BR=0.085, POCK=0.12;
-var FR=0.988, STOP=0.0045, RAIL=0.86, RESTB=0.95;
+// --- Rigid-body billiards constants (units: world / second) ---
+var BMASS=1, BINERT=0.4*BMASS*BR*BR, GACC=15.0;      // I = 2/5 m r^2
+var MUK=0.20, MUR=0.016, MUSP=2.4, ESLIP=0.02;       // kinetic / rolling / spin friction; slip epsilon
+var E_BALL=0.96, E_CUSH=0.85, THROW=0.5, CUSH_THROW=0.06, SWERVE=0.045; // restitution & english effects
+var MAXSPD=7.6, SQUIRT=0.085, FOLLOWK=1.0, SIDEK=8.0;// max break speed, cue deflection, follow/draw, side
+var STOPV=0.02, STOPW=0.25;                          // settle thresholds (lin / ang)
+var DT=1/60;
 function POCKETS(){ return [[-HX,-HZ],[0,-HZ],[HX,-HZ],[-HX,HZ],[0,HZ],[HX,HZ]]; }
 
 // ---- AI roster ----
@@ -57,7 +63,7 @@ function charById(id){ for(var i=0;i<CHARACTERS.length;i++) if(CHARACTERS[i].id=
 // ---- State ----
 var R3={renderer:null,scene:null,camera:null,env:null,balls:[],cue:null,ghost:null,aimLine:null,lights:{},pool:null};
 var G={ balls:[],cueBall:null,state:'aiming',turn:'you',aim:0,power:0,drawing:false,spin:{x:0,y:0},cueSpin:{x:0,y:0},spinUsed:false,
-  scores:{you:0,ai:0},potted:[],scratch:false,ai:CHARACTERS[1],turnStart:0,slow:false,bubbleT:null };
+  scores:{you:0,ai:0},potted:[],scratch:false,firstHit:null,ai:CHARACTERS[1],turnStart:0,slow:false,bubbleT:null,chalk:1 };
 var CAM={mode:'aim',az:Math.PI*0.5,el:0.62,dist:5.4,cinem:0};
 var PLAYER=loadPlayer();
 
@@ -155,8 +161,11 @@ function buildCue(){ var grp=new THREE.Group();
 }
 function buildAimAids(){
   var ghost=new THREE.Mesh(new THREE.SphereGeometry(BR,20,16), new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.28})); ghost.visible=false; R3.scene.add(ghost); R3.ghost=ghost;
-  var geo=new THREE.BufferGeometry(); geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(12),3));
-  var line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:0x9fefff,transparent:true,opacity:0.6})); line.visible=false; R3.scene.add(line); R3.aimLine=line;
+  var geo=new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(18),3));      // 3 segments (6 verts)
+  var col=new Float32Array([0.6,0.95,1, 0.6,0.95,1,  1,0.82,0.29, 1,0.82,0.29,  0.21,0.9,1, 0.21,0.9,1]); // aim, target(B), cue(A)
+  geo.setAttribute('color', new THREE.BufferAttribute(col,3));
+  var line=new THREE.LineSegments(geo, new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:0.85})); line.visible=false; R3.scene.add(line); R3.aimLine=line;
 }
 function applyVenue(name){ R3.venue=name; var v=VENUES[name]||VENUES.lounge;
   R3.scene.background=new THREE.Color(v.bg);
@@ -188,58 +197,98 @@ function buildBallMeshes(){
   });
 }
 function syncBalls(){ G.balls.forEach(function(b){ if(!b.mesh)return; b.mesh.visible=!b.potted; b.mesh.position.set(b.x,BR,b.z);
-  var sp=Math.hypot(b.vx,b.vz); if(sp>0.0005){ b.mesh.rotateOnWorldAxis(new THREE.Vector3(-b.vz/sp,0,b.vx/sp), sp/BR); } }); }
+  var w=Math.hypot(b.wx,b.wy,b.wz); if(w>0.0005){ b.mesh.rotateOnWorldAxis(new THREE.Vector3(b.wx/w,b.wy/w,b.wz/w), w*DT); } }); }
 
 // ============================================================
 //  Game / rack / physics
 // ============================================================
 function curCue(){ for(var i=0;i<CUES.length;i++) if(CUES[i].id===PLAYER.cue) return CUES[i]; return CUES[0]; }
-function maxV(){ return 0.20*curCue().traits.power; }
-function spinForce(){ return 0.20*0.32*curCue().traits.spin; }
+function mkBall(n,x,z){ return {n:n,x:x,z:z,vx:0,vz:0,wx:0,wy:0,wz:0,r:BR,potted:false}; }
 
 function newGame(){ rack(); buildBallMeshes(); G.scores={you:0,ai:0}; G.state='aiming'; G.turn='you'; G.aim=0; G.power=0; G.drawing=false; G.spin={x:0,y:0}; G.cueSpin={x:0,y:0};
-  G.turnStart=performance.now(); G.slow=false; hideMsg(); setTurn(); hideBubble(); setPower(0); drawSpinDial(); updateScore(); }
+  G.turnStart=performance.now(); G.slow=false; hideMsg(); setTurn(); hideBubble(); setPower(0); drawSpinDial(); updateScore(); G.chalk=1; updateChalk(); }
 function rack(){
-  var cy=0; var cue={n:0,x:-HX*0.55,z:cy,vx:0,vz:0,r:BR,potted:false,spin:0};
+  var cue=mkBall(0,-HX*0.55,0);
   var order=[1,9,2,3,8,10,4,11,5,12,6,13,7,14,15], sp=BR*2.06, dx=sp*0.87, fx=HX*0.32, balls=[cue], idx=0, row=0;
-  while(idx<order.length){ for(var k=0;k<=row&&idx<order.length;k++){ balls.push({n:order[idx],x:fx+row*dx,z:cy+(k-row/2)*sp,vx:0,vz:0,r:BR,potted:false,spin:0}); idx++; } row++; }
+  while(idx<order.length){ for(var k=0;k<=row&&idx<order.length;k++){ balls.push(mkBall(order[idx], fx+row*dx, (k-row/2)*sp)); idx++; } row++; }
   G.balls=balls; G.cueBall=cue;
 }
-function shoot(power){ if(G.state!=='aiming')return; var v=power*maxV();
-  G.cueBall.vx=Math.cos(G.aim)*v; G.cueBall.vz=Math.sin(G.aim)*v; G.cueBall.spin=G.spin.x;
-  G.cueSpin={x:G.spin.x,y:G.spin.y}; G.spinUsed=false; G.potted=[]; G.scratch=false;
-  CAM.cinem=0; CAM.shotAim=G.aim; G.state='shooting'; }
-function update(){ if(G.state!=='shooting')return; var bs=G.balls,i,maxSp=0;
-  for(i=0;i<bs.length;i++){ if(!bs[i].potted){ var s=Math.abs(bs[i].vx)+Math.abs(bs[i].vz); if(s>maxSp)maxSp=s; } }
-  var steps=Math.max(1,Math.min(14,Math.ceil(maxSp/(BR*0.4))));
-  for(var st=0;st<steps;st++) step(1/steps);
-  var moving=false; for(i=0;i<bs.length;i++){ var b=bs[i]; if(b.potted)continue; b.vx*=FR; b.vz*=FR; b.spin*=0.985; if(Math.hypot(b.vx,b.vz)<STOP){ b.vx=0; b.vz=0; } else moving=true; }
-  if(!moving) endShot();
+function shoot(power){
+  if(G.state!=='aiming')return;
+  var off=G.spin, spinMag=Math.hypot(off.x,off.y), aim=G.aim;
+  // Chalk / miscue: extreme spin on a low chalk meter scatters the shot
+  var miscue=(spinMag>0.55 && G.chalk<0.25 && Math.random()<0.7);
+  G.chalk=Math.max(0, G.chalk-(0.05+spinMag*0.12)); updateChalk();
+  if(miscue){ power*=0.5; aim+=(Math.random()*2-1)*0.12; off={x:0,y:0}; flash('MISCUE!'); }
+  // Squirt / cue deflection: cue ball leaves slightly off the aim line, away from the english
+  var dep=aim - off.x*SQUIRT;
+  var spd=power*MAXSPD*curCue().traits.power, st=curCue().traits.spin;
+  var cb=G.cueBall; cb.vx=Math.cos(dep)*spd; cb.vz=Math.sin(dep)*spd;
+  // Angular velocity: follow/draw (rolling axis) + side english (vertical axis)
+  var sy=-off.y*FOLLOWK*st;                 // up = follow (+), down = draw (-)
+  cb.wx=(cb.vz/BR)*sy; cb.wz=(-cb.vx/BR)*sy;
+  cb.wy=off.x*SIDEK*st;                      // side english -> swerve / cushion throw
+  G.firstHit=null; G.potted=[]; G.scratch=false; CAM.cinem=0; CAM.shotAim=aim; G.state='shooting';
 }
-function step(dt){ var bs=G.balls,i,k,P=POCKETS();
-  for(i=0;i<bs.length;i++){ var b=bs[i]; if(b.potted)continue; b.x+=b.vx*dt; b.z+=b.vz*dt;
-    var np=false; for(k=0;k<P.length;k++){ if(Math.hypot(b.x-P[k][0],b.z-P[k][1])<POCK*1.6){ np=true; break; } }
-    if(!np){ var hit='';
-      if(b.x-b.r<-HX){ b.x=-HX+b.r; b.vx=Math.abs(b.vx)*RAIL; hit='x'; }
-      if(b.x+b.r>HX){ b.x=HX-b.r; b.vx=-Math.abs(b.vx)*RAIL; hit='x'; }
-      if(b.z-b.r<-HZ){ b.z=-HZ+b.r; b.vz=Math.abs(b.vz)*RAIL; hit='z'; }
-      if(b.z+b.r>HZ){ b.z=HZ-b.r; b.vz=-Math.abs(b.vz)*RAIL; hit='z'; }
-      if(hit&&b.n===0&&Math.abs(b.spin)>0.02){ if(hit==='x') b.vz+=b.spin*spinForce()*0.4; else b.vx+=b.spin*spinForce()*0.4; b.spin*=0.5; }
-    }
+
+// ---- Rigid-body solver: substep + per-substep friction state machine + CCD-safe steps ----
+function update(){
+  if(G.state!=='shooting')return;
+  var bs=G.balls,i,maxSp=0;
+  for(i=0;i<bs.length;i++){ if(!bs[i].potted){ var s=Math.hypot(bs[i].vx,bs[i].vz); if(s>maxSp)maxSp=s; } }
+  var N=Math.max(1,Math.min(16,Math.ceil(maxSp*DT/(BR*0.30)))), h=DT/N;  // step < 0.3r -> no tunneling
+  for(var st=0; st<N; st++) substep(h);
+  var moving=false;
+  for(i=0;i<bs.length;i++){ var b=bs[i]; if(b.potted)continue; if(Math.hypot(b.vx,b.vz)>STOPV||Math.abs(b.wy)>STOPW) moving=true; }
+  if(!moving){ for(i=0;i<bs.length;i++){ var q=bs[i]; q.vx=q.vz=q.wx=q.wy=q.wz=0; } endShot(); }
+}
+function substep(h){
+  var bs=G.balls,i,k,P=POCKETS();
+  for(i=0;i<bs.length;i++){ var b=bs[i]; if(b.potted)continue; frictionStep(b,h);
+    if(!isFinite(b.vx)||!isFinite(b.vz)){ b.vx=b.vz=b.wx=b.wy=b.wz=0; }
+    b.x+=b.vx*h; b.z+=b.vz*h; }
+  for(i=0;i<bs.length;i++) for(k=i+1;k<bs.length;k++){ var A=bs[i],B=bs[k]; if(!A.potted&&!B.potted) collide(A,B); }
+  for(i=0;i<bs.length;i++){ if(!bs[i].potted) cushion(bs[i],P); }
+  for(i=0;i<bs.length;i++){ var d=bs[i]; if(d.potted)continue; for(k=0;k<P.length;k++){ if(Math.hypot(d.x-P[k][0],d.z-P[k][1])<POCK){ d.potted=true; d.vx=d.vz=d.wx=d.wy=d.wz=0; G.potted.push(d.n); break; } } }
+}
+function frictionStep(b,h){
+  // slip = contact-point velocity = v + w x (0,-r,0)  ->  (vx + r*wz, vz - r*wx)
+  var ux=b.vx+BR*b.wz, uz=b.vz-BR*b.wx, us=Math.hypot(ux,uz);
+  if(us>ESLIP){ // SLIDING: kinetic friction opposes slip; torque drives toward rolling
+    var nx=ux/us, nz=uz/us, a=MUK*GACC;
+    b.vx-=a*nx*h; b.vz-=a*nz*h;
+    b.wx+=(BR*BMASS*a*nz/BINERT)*h;
+    b.wz+=(-BR*BMASS*a*nx/BINERT)*h;
+    var sp=Math.hypot(b.vx,b.vz); if(sp>1e-4){ var px=-b.vz/sp, pz=b.vx/sp; b.vx+=px*SWERVE*b.wy*h; b.vz+=pz*SWERVE*b.wy*h; } // swerve from side spin
+  } else { // ROLLING: rolling resistance, ang vel locked to v
+    var sp2=Math.hypot(b.vx,b.vz);
+    if(sp2>STOPV){ var ar=MUR*GACC; b.vx-=ar*(b.vx/sp2)*h; b.vz-=ar*(b.vz/sp2)*h; } else { b.vx=0; b.vz=0; }
+    b.wx=b.vz/BR; b.wz=-b.vx/BR;
   }
-  for(i=0;i<bs.length;i++){ for(k=i+1;k<bs.length;k++){ var A=bs[i],B=bs[k]; if(A.potted||B.potted)continue;
-    var dx=B.x-A.x,dz=B.z-A.z,d=Math.sqrt(dx*dx+dz*dz),mn=A.r+B.r;
-    if(d<mn&&d>1e-6){ var nx=dx/d,nz=dz/d,dv=(A.vx-B.vx)*nx+(A.vz-B.vz)*nz;
-      if(dv>0){ var im=dv*RESTB; A.vx-=im*nx; A.vz-=im*nz; B.vx+=im*nx; B.vz+=im*nz; }
-      var ov=(mn-d)*0.5; A.x-=nx*ov; A.z-=nz*ov; B.x+=nx*ov; B.z+=nz*ov;
-      if((A.n===0||B.n===0)&&!G.spinUsed){ var cb=(A.n===0)?A:B,ux=Math.cos(G.aim),uz=Math.sin(G.aim),fd=-G.cueSpin.y;
-        cb.vx+=ux*fd*spinForce(); cb.vz+=uz*fd*spinForce(); cb.vx+=(-uz)*G.cueSpin.x*spinForce()*0.6; cb.vz+=(ux)*G.cueSpin.x*spinForce()*0.6; G.spinUsed=true; }
-    }
-  } }
-  for(i=0;i<bs.length;i++){ var ba=bs[i]; if(ba.potted)continue; for(k=0;k<P.length;k++){ if(Math.hypot(ba.x-P[k][0],ba.z-P[k][1])<POCK){ ba.potted=true; ba.vx=ba.vz=0; G.potted.push(ba.n); break; } } }
+  if(b.wy!==0){ var dd=MUSP*h; b.wy=(Math.abs(b.wy)<=dd)?0:b.wy-Math.sign(b.wy)*dd; } // spin (vertical) decay
+}
+function collide(A,B){
+  var dx=B.x-A.x, dz=B.z-A.z, d=Math.hypot(dx,dz), mn=A.r+B.r; if(d>=mn||d<1e-9)return;
+  var nx=dx/d, nz=dz/d, ov=(mn-d)*0.5;
+  A.x-=nx*ov; A.z-=nz*ov; B.x+=nx*ov; B.z+=nz*ov;            // separate overlap
+  var rvx=A.vx-B.vx, rvz=A.vz-B.vz, vn=rvx*nx+rvz*nz;
+  if(vn>0){
+    var j=(1+E_BALL)/2*vn;                                    // equal-mass restitution along line of centers
+    A.vx-=j*nx; A.vz-=j*nz; B.vx+=j*nx; B.vz+=j*nz;
+    var tx=-nz, tz=nx, vt=(rvx*tx+rvz*tz);                    // throw: small tangential transfer
+    var jt=THROW*0.04*vt; A.vx-=jt*tx; A.vz-=jt*tz; B.vx+=jt*tx; B.vz+=jt*tz;
+    if((A.n===0||B.n===0)&&G.firstHit===null) G.firstHit=(A.n===0?B.n:A.n);
+  }
+}
+function cushion(b,P){
+  for(var k=0;k<P.length;k++){ if(Math.hypot(b.x-P[k][0],b.z-P[k][1])<POCK*1.6) return; }
+  if(b.x-b.r<-HX){ b.x=-HX+b.r; b.vx=Math.abs(b.vx)*E_CUSH; b.vz+=CUSH_THROW*b.wy; b.wy*=0.6; }
+  if(b.x+b.r> HX){ b.x= HX-b.r; b.vx=-Math.abs(b.vx)*E_CUSH; b.vz-=CUSH_THROW*b.wy; b.wy*=0.6; }
+  if(b.z-b.r<-HZ){ b.z=-HZ+b.r; b.vz=Math.abs(b.vz)*E_CUSH; b.vx-=CUSH_THROW*b.wy; b.wy*=0.6; }
+  if(b.z+b.r> HZ){ b.z= HZ-b.r; b.vz=-Math.abs(b.vz)*E_CUSH; b.vx+=CUSH_THROW*b.wy; b.wy*=0.6; }
 }
 function endShot(){
-  if(G.cueBall.potted){ G.cueBall.potted=false; G.cueBall.x=-HX*0.55; G.cueBall.z=0; G.cueBall.vx=G.cueBall.vz=0; G.cueBall.spin=0; G.scratch=true; }
+  if(G.cueBall.potted){ G.cueBall.potted=false; G.cueBall.x=-HX*0.55; G.cueBall.z=0; G.cueBall.vx=G.cueBall.vz=G.cueBall.wx=G.cueBall.wy=G.cueBall.wz=0; G.scratch=true; }
   var shooter=G.turn, potted=G.potted.filter(function(n){return n>0;}).length;
   if(potted>0){ G.scores[shooter]+=potted; updateScore(); if(shooter==='you') addXp(potted*12); }
   var rem=G.balls.filter(function(b){return b.n>0&&!b.potted;}).length;
@@ -313,11 +362,19 @@ function updateAim(){ var show=(G.state==='aiming'&&!G.cueBall.potted&&G.turn===
   var big=20, tx=fx>0.001?(HX-cue.r-cue.x)/fx:fx<-0.001?(-HX+cue.r-cue.x)/fx:big, tz=fz>0.001?(HZ-cue.r-cue.z)/fz:fz<-0.001?(-HZ+cue.r-cue.z)/fz:big;
   var railLen=Math.min(tx>0?tx:big,tz>0?tz:big,big), len=fh.hit?Math.min(fh.d,railLen):railLen;
   var ex=cue.x+fx*len, ez=cue.z+fz*len;
-  var pos=R3.aimLine.geometry.attributes.position; pos.setXYZ(0,cue.x,BR,cue.z); pos.setXYZ(1,ex,BR,ez);
-  if(fh.hit){ var ox=fh.hit.x-ex,oz=fh.hit.z-ez,od=Math.hypot(ox,oz)||1, plen=curCue().traits.assist>=2?1.2:0.4;
-    pos.setXYZ(2,fh.hit.x,BR,fh.hit.z); pos.setXYZ(3,fh.hit.x+ox/od*plen,BR,fh.hit.z+oz/od*plen); R3.aimLine.geometry.setDrawRange(0,4);
-    R3.ghost.visible=true; R3.ghost.position.set(ex,BR,ez); }
-  else { pos.setXYZ(2,ex,BR,ez); pos.setXYZ(3,ex,BR,ez); R3.aimLine.geometry.setDrawRange(0,2); R3.ghost.visible=false; }
+  var pos=R3.aimLine.geometry.attributes.position;
+  pos.setXYZ(0,cue.x,BR,cue.z); pos.setXYZ(1,ex,BR,ez);                 // aim line (cue -> ghost)
+  var BL = curCue().traits.assist>=2 ? 1.4 : 0.55;                      // optics: guide length per cue
+  if(fh.hit){
+    R3.ghost.visible=true; R3.ghost.position.set(ex,BR,ez);
+    var ox=fh.hit.x-ex, oz=fh.hit.z-ez, od=Math.hypot(ox,oz)||1, obx=ox/od, obz=oz/od;
+    pos.setXYZ(2,fh.hit.x,BR,fh.hit.z); pos.setXYZ(3,fh.hit.x+obx*BL,BR,fh.hit.z+obz*BL);   // Line B: target path
+    var px=-obz, pz=obx; if(fx*px+fz*pz<0){ px=-px; pz=-pz; }
+    pos.setXYZ(4,ex,BR,ez); pos.setXYZ(5,ex+px*BL*0.8,BR,ez+pz*BL*0.8);                     // Line A: cue deflection (90)
+  } else {
+    R3.ghost.visible=false;
+    pos.setXYZ(2,ex,BR,ez); pos.setXYZ(3,ex,BR,ez); pos.setXYZ(4,ex,BR,ez); pos.setXYZ(5,ex,BR,ez);
+  }
   pos.needsUpdate=true;
 }
 
@@ -357,6 +414,7 @@ function bindUI(){
   sc.addEventListener('touchstart',function(e){ e.preventDefault(); setSpin(e); },{passive:false}); sc.addEventListener('touchmove',function(e){ e.preventDefault(); setSpin(e); },{passive:false});
 
   document.getElementById('view-btn').addEventListener('click',function(){ CAM.mode=(CAM.mode==='aim')?'orbit':'aim'; this.textContent=(CAM.mode==='aim')?'👁 Orbit':'🎯 Aim'; });
+  var chalkG=document.getElementById('chalk-gauge'); if(chalkG) chalkG.addEventListener('click',function(){ G.chalk=1; updateChalk(); });
   document.getElementById('new-btn').addEventListener('click',newGame);
   document.getElementById('msg-btn').addEventListener('click',function(){ (G._msgCb||newGame)(); });
   document.getElementById('cues-btn').addEventListener('click',openCues);
@@ -374,6 +432,8 @@ function showMsg(t,s,btn,cb){ document.getElementById('msg-title').textContent=t
   var b=document.getElementById('msg-btn'); b.textContent=btn||'Play Again'; G._msgCb=cb||newGame;
   document.getElementById('message').classList.remove('hidden'); }
 function updateCash(){ var el=document.getElementById('cash'); if(el) el.textContent='$'+PLAYER.career.cash; }
+function updateChalk(){ var g=document.getElementById('chalk-gauge'), f=document.getElementById('chalk-fill'); if(f) f.style.height=Math.round(G.chalk*100)+'%'; if(g) g.classList.toggle('low', G.chalk<0.25); }
+function flash(t){ var el=document.getElementById('unlock-toast'); if(!el)return; el.innerHTML='⚠ '+t; el.classList.remove('hidden'); clearTimeout(flash._t); flash._t=setTimeout(function(){ el.classList.add('hidden'); },1500); }
 function hideMsg(){ document.getElementById('message').classList.add('hidden'); }
 function say(cat){ var pool=G.ai.taunts[cat]; if(!pool||!pool.length)return; showBubble(pool[Math.floor(Math.random()*pool.length)]); }
 function showBubble(t){ var b=document.getElementById('ai-bubble'); b.textContent=G.ai.avatar+' '+t; b.classList.remove('hidden'); clearTimeout(G.bubbleT); G.bubbleT=setTimeout(hideBubble,3000); }

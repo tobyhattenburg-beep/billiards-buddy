@@ -86,7 +86,11 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
 .opp-av{font-size:30px;} .opp-nm{font-size:13px; font-weight:600; margin:4px 0;} .opp-st{font-size:10px; color:var(--dim); letter-spacing:1px; text-transform:uppercase;}
 .opp.beaten .opp-st{color:var(--green);}
 .hidden{display:none !important;}
-@media (max-width:640px){ #power-gauge{height:170px;} #spin{width:60px;height:60px;} #xp-track{width:90px;} #topbar .sc{font-size:20px;} }
+#chalk-gauge{position:relative; width:30px; height:40px; margin-top:10px; border-radius:5px; cursor:pointer; overflow:hidden; background:rgba(0,0,0,0.45); border:1px solid var(--border); box-shadow:inset 0 0 8px rgba(0,0,0,0.6);}
+#chalk-fill{position:absolute; left:0; right:0; bottom:0; height:100%; background:linear-gradient(0deg,#1565a8,var(--cyan)); transition:height .25s;}
+#chalk-gauge.low{border-color:var(--red); box-shadow:0 0 10px rgba(255,90,90,0.5);}
+#chalk-gauge.low #chalk-fill{background:linear-gradient(0deg,#a83a3a,var(--red));}
+@media (max-width:640px){ #power-gauge{height:170px;} #spin{width:60px;height:60px;} #xp-track{width:90px;} #topbar .sc{font-size:20px;} #chalk-gauge{height:30px;} }
 </style>
 </head>
 <body>
@@ -103,6 +107,8 @@ html,body{margin:0; height:100%; background:#04060c; color:var(--ivory); font-fa
     <span class="lbl">Power</span>
     <div id="power-gauge"><div id="power-fill"></div></div>
     <span id="power-pct">0%</span>
+    <div id="chalk-gauge" title="Tap to chalk up"><div id="chalk-fill"></div></div>
+    <span class="lbl">Chalk</span>
   </div>
 
   <div class="hud" id="rightbar">
