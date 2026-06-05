@@ -210,8 +210,14 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
 .lb-rank{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold2);width:24px;text-align:center;flex-shrink:0;}
 .lb-av{width:40px;height:40px;border-radius:50%;background-size:cover;background-position:center;border:2px solid var(--borderg);flex-shrink:0;}
 .lb-row.top1 .lb-av{border-color:var(--gold2);} .lb-row.top1 .lb-rank{color:#f0c040;}
-.lb-name{flex:1;font-family:'Playfair Display';color:var(--ivory);font-size:15px;}
-.lb-pts{font-family:'DM Mono',monospace;font-size:12px;color:var(--green2);}
+.lb-row.you{background:rgba(212,160,23,0.1);border-radius:8px;} .lb-row.you .lb-av{border-color:var(--gold);}
+.lb-name{flex:1;font-family:'Playfair Display';color:var(--ivory);font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-pts{font-family:'DM Mono',monospace;font-size:12px;color:var(--green2);flex-shrink:0;}
+/* Profile — avatar + rank (Phase 3) */
+.pf-avatar{width:64px;height:64px;border-radius:50%;background-size:cover;background-position:center;border:2px solid var(--gold);flex-shrink:0;background-color:#0d3316;box-shadow:0 2px 10px rgba(0,0,0,0.5);}
+.rank-badge{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;color:#0a0b0d;background:var(--gold);text-transform:uppercase;}
+.rank-track{height:8px;border-radius:5px;background:rgba(0,0,0,0.45);border:1px solid var(--borderg);overflow:hidden;}
+.rank-bar{height:100%;width:0%;background:var(--gold);transition:width .4s;box-shadow:0 0 8px rgba(255,210,74,0.5);}
 </style>
 </head>
 <body>
@@ -418,7 +424,11 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
         </div>
         <div style="padding:0 16px 6px;flex-shrink:0;"><div class="eyebrow" style="margin-bottom:8px;">From the Tables</div></div>
         <div class="ugc-strip" id="ugc-strip"></div>
-        <div style="padding:14px 16px 6px;flex-shrink:0;"><div class="eyebrow">Top Players This Month</div></div>
+        <div style="padding:14px 16px 6px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;"><div class="eyebrow">Global Leaderboard</div></div>
+        <div id="lb-tabs" style="display:flex;gap:8px;padding:0 16px 8px;flex-shrink:0;">
+          <div class="pill active" onclick="setLbMetric('skill',this)">Skill Rating</div>
+          <div class="pill" onclick="setLbMetric('wins',this)">Wins</div>
+        </div>
         <div id="leaderboard" style="flex-shrink:0;padding:0 6px 10px;"></div>
         <div style="padding:6px 16px;flex-shrink:0;"><div class="eyebrow">Live Chat</div></div>
         <div id="community-status" style="padding:0 16px 8px;flex-shrink:0;"></div>
@@ -453,16 +463,33 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
     <div class="screen" id="screen-profile">
       <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Player Account</div><h2 id="display-name">Welcome, Player</h2></div>
       <div class="content">
-        <div class="card gold-card" style="padding:20px;border:1px solid var(--gold);margin-bottom:20px;">
-          <div class="grid-3">
-            <div class="stat-card"><div class="stat-value" id="stat-games">0</div><div class="stat-label">Wins</div></div>
-            <div class="stat-card"><div class="stat-value" id="stat-level">BEG</div><div style="font-size:10px;color:var(--dim);font-family:'DM Mono';margin-top:4px;">RANK</div></div>
-            <div class="stat-card"><div class="stat-value" id="stat-hours">0</div><div class="stat-label">Hours</div></div>
+        <div class="card gold-card" style="padding:18px;border:1px solid var(--gold);margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div id="pf-avatar" class="pf-avatar"></div>
+            <div style="flex:1;min-width:0;">
+              <div id="pf-name" style="font-family:'Playfair Display';font-size:20px;color:var(--ivory);">Player</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:5px;flex-wrap:wrap;">
+                <span id="pf-rank" class="rank-badge">Rookie</span>
+                <span style="font-family:'DM Mono';font-size:11px;color:var(--gold2);">Skill <b id="pf-skill">1000</b></span>
+                <span style="font-family:'DM Mono';font-size:11px;color:var(--dim);">Global <b id="pf-globalrank" style="color:var(--green2);">#—</b></span>
+              </div>
+            </div>
+            <button onclick="rerollAvatar()" title="New avatar" style="background:rgba(0,0,0,0.3);border:1px solid var(--borderg);border-radius:8px;color:var(--gold);cursor:pointer;font-size:16px;padding:6px 9px;line-height:1;">&#127922;</button>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
-            <div class="stat-card"><div class="stat-value" id="stat-shots">0</div><div class="stat-label">Shots Timed</div></div>
-            <div class="stat-card"><div class="stat-value" id="stat-tournaments">0</div><div class="stat-label">Events Run</div></div>
+          <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;font-family:'DM Mono';font-size:10px;color:var(--dim);margin-bottom:5px;"><span id="pf-rank-cur">Rookie</span><span id="pf-rank-next">&rarr; Amateur</span></div>
+            <div class="rank-track"><div id="pf-rank-bar" class="rank-bar"></div></div>
           </div>
+        </div>
+        <div class="grid-3" style="margin-bottom:10px;">
+          <div class="stat-card"><div class="stat-value" id="stat-games">0</div><div class="stat-label">Wins</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-losses">0</div><div class="stat-label">Losses</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-winrate">0%</div><div class="stat-label">Win Rate</div></div>
+        </div>
+        <div class="grid-3" style="margin-bottom:16px;">
+          <div class="stat-card"><div class="stat-value" id="stat-hours">0</div><div class="stat-label">Hours</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-shots">0</div><div class="stat-label">Shots Timed</div></div>
+          <div class="stat-card"><div class="stat-value" id="stat-tournaments">0</div><div class="stat-label">Events Run</div></div>
         </div>
         <div class="card" style="padding:20px;margin-bottom:14px;">
           <div style="font-family:'DM Mono';font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Update Identity</div>
@@ -734,7 +761,7 @@ function showScreen(id) {
 // ════════════════════════════════════════════════════════
 // PERSISTENCE LAYER
 // ════════════════════════════════════════════════════════
-const DEFAULT_PROFILE = { name:"Hustler Pro", level:"Beginner", favoriteVenues:[], stats:{ gamesWon:0, shotsTimed:0, practiceHours:0, poolBests:{} } };
+const DEFAULT_PROFILE = { name:"Hustler Pro", level:"Beginner", skill:1000, avatarSeed:"", favoriteVenues:[], stats:{ gamesWon:0, gamesLost:0, shotsTimed:0, practiceHours:0, poolBests:{} } };
 let userProfile = JSON.parse(localStorage.getItem('bb_profile')) || JSON.parse(JSON.stringify(DEFAULT_PROFILE));
 if (!userProfile.stats) userProfile.stats = {};
 if (!userProfile.stats.poolBests) {
@@ -742,20 +769,52 @@ if (!userProfile.stats.poolBests) {
     if (typeof userProfile.stats.poolBest === 'number') userProfile.stats.poolBests['9ball'] = userProfile.stats.poolBest;
 }
 if (!userProfile.favoriteVenues) userProfile.favoriteVenues = [];
+// Phase 3 — ranked progression migrations
+if (typeof userProfile.skill !== 'number') userProfile.skill = 1000;
+if (typeof userProfile.stats.gamesLost !== 'number') userProfile.stats.gamesLost = 0;
+if (!userProfile.avatarSeed) userProfile.avatarSeed = userProfile.name || 'player';
+
+// Rank tiers derived from skill rating
+const RANKS = [
+    { tier:'Rookie',      min:0,    color:'#a89060' },
+    { tier:'Amateur',     min:1100, color:'#27ae60' },
+    { tier:'Regular',     min:1300, color:'#1a9fd0' },
+    { tier:'Shark',       min:1500, color:'#b06bff' },
+    { tier:'Master',      min:1700, color:'#f0c040' },
+    { tier:'Hustle King', min:1900, color:'#e74c3c' }
+];
+function rankFor(skill){ var i, idx=0; for(i=0;i<RANKS.length;i++){ if(skill>=RANKS[i].min) idx=i; }
+    var cur=RANKS[idx], next=RANKS[idx+1], into=skill-cur.min, need=next?(next.min-cur.min):1;
+    return { idx:idx, tier:cur.tier, color:cur.color, next:next?next.tier:null, into:into, need:need,
+             pct: next?Math.max(2,Math.min(100,Math.round(into/need*100))):100 }; }
+function winRate(){ var w=userProfile.stats.gamesWon||0, l=userProfile.stats.gamesLost||0, t=w+l; return t?Math.round(w/t*100):0; }
 
 function saveProfile() { localStorage.setItem('bb_profile', JSON.stringify(userProfile)); updateProfileUI(); }
 
 function updateProfileUI() {
+    const set=function(id,v){ var e=document.getElementById(id); if(e) e.textContent=v; };
     const nameEl=document.getElementById('display-name'), inputEl=document.getElementById('edit-name');
     if(nameEl) nameEl.textContent = "Clubhouse: " + userProfile.name;
     if(inputEl) inputEl.value = userProfile.name;
-    const sg=document.getElementById('stat-games'), sl=document.getElementById('stat-level'), sh=document.getElementById('stat-hours');
-    const ss=document.getElementById('stat-shots'), st=document.getElementById('stat-tournaments');
-    if(sg) sg.textContent = userProfile.stats.gamesWon;
-    if(sl) sl.textContent = userProfile.level.substring(0,3).toUpperCase();
-    if(sh) sh.textContent = Math.round(userProfile.stats.practiceHours * 10) / 10;
-    if(ss) ss.textContent = userProfile.stats.shotsTimed || 0;
-    if(st) st.textContent = userProfile.stats.tournamentsRun || 0;
+    // Identity + rank
+    const r = rankFor(userProfile.skill);
+    userProfile.level = r.tier; // keep legacy field in sync
+    set('pf-name', userProfile.name);
+    set('pf-skill', userProfile.skill);
+    set('pf-globalrank', '#' + playerGlobalRank('skill'));
+    const rb=document.getElementById('pf-rank'); if(rb){ rb.textContent=r.tier; rb.style.background=r.color; rb.style.color = (r.tier==='Master')?'#1a1205':'#0a0b0d'; }
+    set('pf-rank-cur', r.tier);
+    set('pf-rank-next', r.next ? ('→ ' + r.next) : 'Max rank');
+    const bar=document.getElementById('pf-rank-bar'); if(bar){ bar.style.width=r.pct+'%'; bar.style.background=r.color; }
+    const av=document.getElementById('pf-avatar'); if(av) av.style.backgroundImage = "url('" + avatarUrl(userProfile.avatarSeed||userProfile.name) + "')";
+    // Stats
+    set('stat-games', userProfile.stats.gamesWon||0);
+    set('stat-losses', userProfile.stats.gamesLost||0);
+    set('stat-winrate', winRate()+'%');
+    set('stat-hours', Math.round((userProfile.stats.practiceHours||0) * 10) / 10);
+    set('stat-shots', userProfile.stats.shotsTimed || 0);
+    set('stat-tournaments', userProfile.stats.tournamentsRun || 0);
+    // Saved venues
     const favCountEl = document.getElementById('fav-count');
     const favListEl = document.getElementById('fav-venues-list');
     if(favCountEl) favCountEl.textContent = userProfile.favoriteVenues.length;
@@ -768,9 +827,15 @@ function updateProfileUI() {
     }
 }
 
+function rerollAvatar() {
+    userProfile.avatarSeed = (userProfile.name||'player') + '-' + Math.floor(Math.random()*100000);
+    saveProfile(); publishLeaderboardEntry();
+    showToast("New avatar set.", "success");
+}
+
 function updateName() {
     const n = document.getElementById('edit-name').value;
-    if(n.trim()) { userProfile.name = n; saveProfile(); showToast("Identity committed.", "success"); }
+    if(n.trim()) { userProfile.name = n; saveProfile(); publishLeaderboardEntry(); showToast("Identity committed.", "success"); }
 }
 
 // ════════════════════════════════════════════════════════
@@ -781,9 +846,9 @@ function adjustScore(p,a){ currentMatch[p]=Math.max(0,currentMatch[p]+a); docume
 function resetMatch(){ currentMatch={p1:0,p2:0}; document.getElementById('p1-score').textContent="0"; document.getElementById('p2-score').textContent="0"; }
 function finalizeMatch(){
     if(currentMatch.p1===0 && currentMatch.p2===0) return;
-    if(currentMatch.p1 > currentMatch.p2){ userProfile.stats.gamesWon+=1; showToast("Victory logged to profile!", "success"); }
-    else { showToast("Match closed. Loss recorded.", "gold"); }
-    saveProfile(); resetMatch();
+    if(currentMatch.p1 > currentMatch.p2){ userProfile.stats.gamesWon+=1; userProfile.skill+=24; showToast("Victory! +24 skill", "success"); }
+    else { userProfile.stats.gamesLost=(userProfile.stats.gamesLost||0)+1; userProfile.skill=Math.max(800, userProfile.skill-16); showToast("Loss recorded. −16 skill", "gold"); }
+    saveProfile(); publishLeaderboardEntry(); resetMatch();
 }
 
 // ════════════════════════════════════════════════════════
@@ -1573,25 +1638,69 @@ function renderCommunityShowcase(){
             return '<div class="ugc-photo" style="background-image:url(\'' + url + '\');"><span>' + caps[i % caps.length] + '</span></div>';
         }).join('');
     }
-    var lb = document.getElementById('leaderboard');
-    if (lb) {
-        var players = [
-            { name:'Jake "The Rail" R.', pts:2480 },
-            { name:'Mia Park', pts:2310 },
-            { name:'Coach Delgado', pts:2155 },
-            { name:(userProfile.name || 'You'), pts:(1200 + (userProfile.stats && userProfile.stats.gamesWon ? userProfile.stats.gamesWon*45 : 0)), you:true },
-            { name:'Sticks Malone', pts:1080 }
-        ].sort(function(a,b){ return b.pts - a.pts; });
-        lb.innerHTML = players.map(function(p,i){
-            return '<div class="lb-row' + (i===0?' top1':'') + (p.you?' you':'') + '">'
-                + '<div class="lb-rank">' + (i+1) + '</div>'
-                + '<div class="lb-av" style="background-image:url(\'' + avatarUrl(p.name) + '\');"></div>'
-                + '<div class="lb-name">' + p.name + (p.you?' <span style="font-family:\'DM Mono\';font-size:9px;color:var(--gold2);">YOU</span>':'') + '</div>'
-                + '<div class="lb-pts">' + p.pts.toLocaleString() + ' pts</div>'
-                + '</div>';
-        }).join('');
-    }
+    renderLeaderboard();
 }
+
+// ════════════════════════════════════════════════════════
+// GLOBAL LEADERBOARD (Phase 3) — local seed roster + live Firebase entries
+// ════════════════════════════════════════════════════════
+var _lbMetric = 'skill';
+var _lbRemote = {}; // real players from other devices, keyed by Firebase uid
+const LB_SEED = [
+    { name:'Vince "Vegas" Calloway', skill:2010, wins:184 },
+    { name:'Mia Park',               skill:1940, wins:171 },
+    { name:'Sharkey Malone',         skill:1880, wins:158 },
+    { name:'The Duchess',            skill:1820, wins:149 },
+    { name:'Coach Delgado',          skill:1760, wins:140 },
+    { name:'Nova Rey',               skill:1690, wins:128 },
+    { name:'Tank Romano',            skill:1610, wins:113 },
+    { name:'Lola Quick',             skill:1540, wins:102 },
+    { name:'Doc Banks',              skill:1470, wins:88 },
+    { name:'Sticks Malone',          skill:1390, wins:73 },
+    { name:'Ricky Diaz',             skill:1300, wins:61 },
+    { name:'Jojo Banks',             skill:1190, wins:44 },
+    { name:'Pip Turner',             skill:1060, wins:29 }
+];
+function leaderboardData(metric){
+    var rows = LB_SEED.map(function(p){ return { name:p.name, skill:p.skill, wins:p.wins, seed:p.name, you:false }; });
+    for (var uid in _lbRemote){ if(!_lbRemote.hasOwnProperty(uid)) continue;
+        if (_fbUser && uid === _fbUser.uid) continue; // our own entry comes from the live profile below
+        var e = _lbRemote[uid]; if(!e || !e.name) continue;
+        rows.push({ name:e.name, skill:e.skill||1000, wins:e.wins||0, seed:e.seed||e.name, you:false });
+    }
+    rows.push({ name:userProfile.name||'You', skill:userProfile.skill, wins:userProfile.stats.gamesWon||0, seed:userProfile.avatarSeed||userProfile.name, you:true });
+    rows.sort(function(a,b){ return (b[metric]||0) - (a[metric]||0); });
+    return rows;
+}
+function playerGlobalRank(metric){ var rows=leaderboardData(metric||'skill'); for(var i=0;i<rows.length;i++) if(rows[i].you) return i+1; return rows.length; }
+function lbRowHtml(p, rank, metric){
+    var val = metric==='skill' ? (p.skill + ' SR') : (p.wins + ' W');
+    return '<div class="lb-row' + (rank===1?' top1':'') + (p.you?' you':'') + '">'
+        + '<div class="lb-rank">' + rank + '</div>'
+        + '<div class="lb-av" style="background-image:url(\'' + avatarUrl(p.seed) + '\');"></div>'
+        + '<div class="lb-name">' + p.name + (p.you?' <span style="font-family:\'DM Mono\';font-size:9px;color:var(--gold2);">YOU</span>':'') + '</div>'
+        + '<div class="lb-pts">' + val + '</div></div>';
+}
+function renderLeaderboard(){
+    var lb = document.getElementById('leaderboard'); if(!lb) return;
+    var metric=_lbMetric, rows=leaderboardData(metric), html='';
+    rows.slice(0,12).forEach(function(p,i){ html += lbRowHtml(p, i+1, metric); });
+    var myRank = playerGlobalRank(metric);
+    if (myRank > 12) html += '<div style="border-top:1px dashed var(--borderg);">' + lbRowHtml(rows[myRank-1], myRank, metric) + '</div>';
+    lb.innerHTML = html;
+}
+function setLbMetric(m, el){ _lbMetric=m;
+    if(el){ var ts=document.querySelectorAll('#lb-tabs .pill'); for(var i=0;i<ts.length;i++) ts[i].classList.remove('active'); el.classList.add('active'); }
+    renderLeaderboard();
+}
+// Best-effort global sync (Firebase). No-ops cleanly if chat isn't connected.
+function publishLeaderboardEntry(){ try{ if(_fbDb && _fbUser){
+    _fbDb.ref('leaderboard/'+_fbUser.uid).set({ name:userProfile.name||'Player', skill:userProfile.skill||1000, wins:userProfile.stats.gamesWon||0, seed:userProfile.avatarSeed||userProfile.name, t:Date.now() });
+} }catch(e){} }
+function syncLeaderboard(){ try{ if(!_fbDb) return;
+    _fbDb.ref('leaderboard').on('value', function(snap){ _lbRemote = snap.val()||{}; renderLeaderboard();
+        var gr=document.getElementById('pf-globalrank'); if(gr) gr.textContent='#'+playerGlobalRank('skill'); });
+} catch(e){} }
 
 function initCommunity() {
     renderCommunityShowcase();
@@ -1602,7 +1711,7 @@ function initCommunity() {
         _fbDb   = firebase.database();
         _fbAuth = firebase.auth();
         _fbAuth.signInAnonymously()
-            .then(function(c){ _fbUser = c.user; listenRoom(_communityRoom); })
+            .then(function(c){ _fbUser = c.user; listenRoom(_communityRoom); publishLeaderboardEntry(); syncLeaderboard(); })
             .catch(function(e){ showCommunitySetup('Auth error: ' + e.message); });
     } catch(e) { showCommunitySetup('Init error: ' + e.message); }
 }
