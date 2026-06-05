@@ -213,6 +213,15 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
 .lb-row.you{background:rgba(212,160,23,0.1);border-radius:8px;} .lb-row.you .lb-av{border-color:var(--gold);}
 .lb-name{flex:1;font-family:'Playfair Display';color:var(--ivory);font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .lb-pts{font-family:'DM Mono',monospace;font-size:12px;color:var(--green2);flex-shrink:0;}
+.lb-act{margin-left:8px;flex-shrink:0;background:rgba(231,76,60,0.14);border:1px solid var(--red2);color:#f5b7b1;border-radius:7px;font-size:13px;line-height:1;padding:4px 8px;cursor:pointer;}
+.lb-act:hover{background:rgba(231,76,60,0.28);}
+.chal-row{display:flex;align-items:center;gap:10px;background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.3);border-radius:10px;padding:8px 10px;margin-bottom:8px;}
+.chal-av{width:34px;height:34px;border-radius:50%;background-size:cover;background-position:center;border:1px solid var(--borderg);flex-shrink:0;}
+.chal-body{flex:1;min-width:0;}
+.chal-name{font-family:'Playfair Display';color:var(--ivory);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.chal-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);}
+.chal-yes{background:var(--green);color:#fff;border:none;border-radius:7px;padding:6px 12px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;flex-shrink:0;}
+.chal-no{background:none;border:1px solid var(--borderg);color:var(--dim);border-radius:7px;padding:6px 10px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;flex-shrink:0;}
 /* Profile — avatar + rank (Phase 3) */
 .pf-avatar{width:64px;height:64px;border-radius:50%;background-size:cover;background-position:center;border:2px solid var(--gold);flex-shrink:0;background-color:#0d3316;box-shadow:0 2px 10px rgba(0,0,0,0.5);}
 .rank-badge{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;color:#0a0b0d;background:var(--gold);text-transform:uppercase;}
@@ -440,6 +449,7 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
           <div class="pill" onclick="switchRoom('equipment',this)">Equipment</div>
           <div class="pill" onclick="switchRoom('players',this)">Find Players</div>
         </div>
+        <div id="challenge-inbox" style="padding:0 16px;flex-shrink:0;"></div>
         <div style="padding:0 16px 6px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;"><div class="eyebrow">Highlights</div><button class="pill" onclick="openCompose()" style="background:var(--gold);color:#0a0b0d;font-weight:700;border-color:var(--gold);">&#43; Share</button></div>
         <div class="ugc-strip" id="feed-strip"></div>
         <div style="padding:14px 16px 6px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;"><div class="eyebrow">Global Leaderboard</div></div>
@@ -1671,9 +1681,57 @@ function avatarUrl(seed){ return 'https://api.dicebear.com/9.x/thumbs/svg?seed='
 
 // UGC photo strip + monthly leaderboard. Renders independently of chat connection.
 function renderCommunityShowcase(){
+    renderChallenges();
     renderFeed();
     renderLeaderboard();
 }
+
+// ════════════════════════════════════════════════════════
+// PLAYER-VS-PLAYER CHALLENGES (Phase 3)
+// ════════════════════════════════════════════════════════
+var _challenges = {};            // incoming, from Firebase challenges/<myUid>
+var _challengeSeedActive = true; // demo placeholder until acted on / real ones arrive
+const _CHALLENGE_SEED = { key:'seed-chal', fromName:'Sharkey Malone', fromSeed:'Sharkey Malone', fromSkill:1880, status:'pending', ts:Date.now()-600000 };
+function challengeList(){
+    var arr=[]; for(var k in _challenges){ if(!_challenges.hasOwnProperty(k)) continue; var c=_challenges[k]; if(c && c.status==='pending'){ c.key=k; arr.push(c); } }
+    if(!arr.length && _challengeSeedActive) arr=[_CHALLENGE_SEED];
+    arr.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return arr;
+}
+function sendChallenge(p){
+    if(p.uid && _fbDb && _fbUser){
+        _fbDb.ref('challenges/'+p.uid).push({ fromUid:_fbUser.uid, fromName:userProfile.name||'Player', fromSeed:userProfile.avatarSeed||userProfile.name, fromSkill:userProfile.skill||1000, status:'pending', ts:Date.now() })
+            .then(function(){ showToast('⚔ Challenge sent to '+p.name+'!','success'); })
+            .catch(function(){ showToast('Could not send challenge.','gold'); });
+    } else {
+        showToast('⚔ '+p.name+' is an AI — take them on in the 3D Career game!','gold');
+    }
+}
+function renderChallenges(){
+    var box=document.getElementById('challenge-inbox'); if(!box) return;
+    var arr=challengeList();
+    if(!arr.length){ box.innerHTML=''; return; }
+    box.innerHTML = '<div class="eyebrow" style="margin:6px 0 8px;">&#9876; Challenges ('+arr.length+')</div>' + arr.map(function(c){
+        return '<div class="chal-row">'
+            + '<div class="chal-av" style="background-image:url(\''+avatarUrl(c.fromSeed||c.fromName)+'\');"></div>'
+            + '<div class="chal-body"><div class="chal-name">'+escCom(c.fromName||'A player')+'</div><div class="chal-sub">wants to play · Skill '+(c.fromSkill||'?')+'</div></div>'
+            + '<button class="chal-yes" onclick="respondChallenge(\''+escCom(c.key)+'\',true)">Accept</button>'
+            + '<button class="chal-no" onclick="respondChallenge(\''+escCom(c.key)+'\',false)">Decline</button>'
+            + '</div>';
+    }).join('');
+}
+function respondChallenge(key, accept){
+    var c = _challenges[key] || (_CHALLENGE_SEED.key===key ? _CHALLENGE_SEED : null);
+    if(_fbDb && _fbUser && _challenges[key]){
+        if(accept) _fbDb.ref('challenges/'+_fbUser.uid+'/'+key+'/status').set('accepted');
+        else _fbDb.ref('challenges/'+_fbUser.uid+'/'+key).remove();
+    } else { _challengeSeedActive = false; }
+    showToast(accept ? ('⚔ Challenge accepted — meet '+((c&&c.fromName)||'them')+' at the table!') : 'Challenge declined.', accept?'success':'info');
+    renderChallenges();
+}
+function listenChallenges(){ try{ if(!_fbDb || !_fbUser) return;
+    _fbDb.ref('challenges/'+_fbUser.uid).on('value', function(snap){ _challenges = snap.val()||{}; renderChallenges(); });
+} catch(e){} }
 
 // ════════════════════════════════════════════════════════
 // HIGHLIGHTS FEED (Phase 3) — share match/trick-shot videos
@@ -1792,33 +1850,37 @@ const LB_SEED = [
     { name:'Pip Turner',             skill:1060, wins:29 }
 ];
 function leaderboardData(metric){
-    var rows = LB_SEED.map(function(p){ return { name:p.name, skill:p.skill, wins:p.wins, seed:p.name, you:false }; });
+    var rows = LB_SEED.map(function(p){ return { name:p.name, skill:p.skill, wins:p.wins, seed:p.name, uid:null, you:false }; });
     for (var uid in _lbRemote){ if(!_lbRemote.hasOwnProperty(uid)) continue;
         if (_fbUser && uid === _fbUser.uid) continue; // our own entry comes from the live profile below
         var e = _lbRemote[uid]; if(!e || !e.name) continue;
-        rows.push({ name:e.name, skill:e.skill||1000, wins:e.wins||0, seed:e.seed||e.name, you:false });
+        rows.push({ name:e.name, skill:e.skill||1000, wins:e.wins||0, seed:e.seed||e.name, uid:uid, you:false });
     }
-    rows.push({ name:userProfile.name||'You', skill:userProfile.skill, wins:userProfile.stats.gamesWon||0, seed:userProfile.avatarSeed||userProfile.name, you:true });
+    rows.push({ name:userProfile.name||'You', skill:userProfile.skill, wins:userProfile.stats.gamesWon||0, seed:userProfile.avatarSeed||userProfile.name, uid:(_fbUser?_fbUser.uid:null), you:true });
     rows.sort(function(a,b){ return (b[metric]||0) - (a[metric]||0); });
     return rows;
 }
 function playerGlobalRank(metric){ var rows=leaderboardData(metric||'skill'); for(var i=0;i<rows.length;i++) if(rows[i].you) return i+1; return rows.length; }
-function lbRowHtml(p, rank, metric){
+var _lbRows = [];
+function lbRowHtml(p, rank, metric, idx){
     var val = metric==='skill' ? (p.skill + ' SR') : (p.wins + ' W');
     return '<div class="lb-row' + (rank===1?' top1':'') + (p.you?' you':'') + '">'
         + '<div class="lb-rank">' + rank + '</div>'
         + '<div class="lb-av" style="background-image:url(\'' + avatarUrl(p.seed) + '\');"></div>'
         + '<div class="lb-name">' + p.name + (p.you?' <span style="font-family:\'DM Mono\';font-size:9px;color:var(--gold2);">YOU</span>':'') + '</div>'
-        + '<div class="lb-pts">' + val + '</div></div>';
+        + '<div class="lb-pts">' + val + '</div>'
+        + (p.you ? '' : '<button class="lb-act" title="Challenge to a match" onclick="challengeRow(' + idx + ')">&#9876;</button>')
+        + '</div>';
 }
 function renderLeaderboard(){
     var lb = document.getElementById('leaderboard'); if(!lb) return;
-    var metric=_lbMetric, rows=leaderboardData(metric), html='';
-    rows.slice(0,12).forEach(function(p,i){ html += lbRowHtml(p, i+1, metric); });
+    var metric=_lbMetric, rows=leaderboardData(metric), html=''; _lbRows=rows;
+    rows.slice(0,12).forEach(function(p,i){ html += lbRowHtml(p, i+1, metric, i); });
     var myRank = playerGlobalRank(metric);
-    if (myRank > 12) html += '<div style="border-top:1px dashed var(--borderg);">' + lbRowHtml(rows[myRank-1], myRank, metric) + '</div>';
+    if (myRank > 12) html += '<div style="border-top:1px dashed var(--borderg);">' + lbRowHtml(rows[myRank-1], myRank, metric, myRank-1) + '</div>';
     lb.innerHTML = html;
 }
+function challengeRow(idx){ var p=_lbRows[idx]; if(p && !p.you) sendChallenge(p); }
 function setLbMetric(m, el){ _lbMetric=m;
     if(el){ var ts=document.querySelectorAll('#lb-tabs .pill'); for(var i=0;i<ts.length;i++) ts[i].classList.remove('active'); el.classList.add('active'); }
     renderLeaderboard();
@@ -1841,7 +1903,7 @@ function initCommunity() {
         _fbDb   = firebase.database();
         _fbAuth = firebase.auth();
         _fbAuth.signInAnonymously()
-            .then(function(c){ _fbUser = c.user; listenRoom(_communityRoom); publishLeaderboardEntry(); syncLeaderboard(); listenFeed(); })
+            .then(function(c){ _fbUser = c.user; listenRoom(_communityRoom); publishLeaderboardEntry(); syncLeaderboard(); listenFeed(); listenChallenges(); })
             .catch(function(e){ showCommunitySetup('Auth error: ' + e.message); });
     } catch(e) { showCommunitySetup('Init error: ' + e.message); }
 }
