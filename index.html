@@ -424,13 +424,21 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
           <span style="font-size:16px;">&#128722;</span>
           <span style="font-family:'DM Mono';font-size:10px;color:var(--dim);">Tap Amazon or eBay on any product to shop. Affiliate links support Billiards Buddy.</span>
         </div>
-        <div id="shop-filters" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+        <div id="shop-filters" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
           <div class="pill active" onclick="setShopCat('all',this)">All</div>
           <div class="pill" onclick="setShopCat('cues',this)">Cues</div>
           <div class="pill" onclick="setShopCat('cases',this)">Cases</div>
+          <div class="pill" onclick="setShopCat('gloves',this)">Gloves</div>
           <div class="pill" onclick="setShopCat('acc',this)">Accessories</div>
           <div class="pill" onclick="setShopCat('chalk',this)">Chalk</div>
           <div class="pill" onclick="setShopCat('tables',this)">Tables</div>
+        </div>
+        <div style="font-family:'DM Mono';font-size:9px;letter-spacing:2px;color:var(--dim);text-transform:uppercase;margin-bottom:6px;">Price Tier</div>
+        <div id="tier-filters" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+          <div class="pill active" onclick="setShopTier('all',this)">All Tiers</div>
+          <div class="pill" onclick="setShopTier('budget',this)">&#36; Budget</div>
+          <div class="pill" onclick="setShopTier('mid',this)">&#36;&#36; Mid-range</div>
+          <div class="pill" onclick="setShopTier('premium',this)">&#36;&#36;&#36; Premium</div>
         </div>
         <div id="products-grid" style="display:flex;flex-direction:column;gap:12px;"></div>
       </div></div>
@@ -1359,79 +1367,110 @@ function stockPhoto(seed){ var s = Math.abs((String(seed)||'').split('').reduce(
 function amzn(q){ return 'https://www.amazon.com/s?k='+encodeURIComponent(q)+'&tag='+AMZN_TAG; }
 function ebay(q){ return 'https://rover.ebay.com/rover/1/711-53200-19255-0/1?toolid=10001&campid='+EBAY_CAMP+'&customid=&mpre='+encodeURIComponent('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(q)); }
 
+// Every product carries a tier: 'budget' (Beginner) · 'mid' (Intermediate) · 'premium' (Professional).
+// Each category below offers all three tiers so players can shop to their level/budget.
 const PROD_API_DATA = [
     // CUES
-    { id:101, cat:'cues', name:'Predator Revo Carbon Fiber Cue', desc:'Ultra-low deflection carbon shaft, pro tour standard.', price:499.00,
+    { id:101, cat:'cues', tier:'premium', name:'Predator Revo Carbon Fiber Cue', desc:'Ultra-low deflection carbon shaft, pro tour standard.', price:499.00,
       amzn:amzn('Predator Revo Carbon Fiber Cue'), ebay:ebay('Predator Revo Carbon Cue') },
-    { id:102, cat:'cues', name:'Mezz EC7-W Excellence Cue', desc:'Japanese craftsmanship, wavy joint, ultra-stiff shaft.', price:389.00,
+    { id:102, cat:'cues', tier:'premium', name:'Mezz EC7-W Excellence Cue', desc:'Japanese craftsmanship, wavy joint, ultra-stiff shaft.', price:389.00,
       amzn:amzn('Mezz EC7 billiard cue'), ebay:ebay('Mezz EC7 pool cue') },
-    { id:103, cat:'cues', name:'Lucasi Hybrid LHC97 Cue', desc:'Hybrid uni-loc joint, zero-flex 2 shaft, 19 oz.', price:219.00,
+    { id:103, cat:'cues', tier:'mid', name:'Lucasi Hybrid LHC97 Cue', desc:'Hybrid uni-loc joint, zero-flex 2 shaft, 19 oz.', price:219.00,
       amzn:amzn('Lucasi Hybrid LHC97 pool cue'), ebay:ebay('Lucasi Hybrid pool cue') },
-    { id:104, cat:'cues', name:'Viking A-222 Billiard Cue', desc:'Solid maple, Birdseye accents, consistent 19 oz feel.', price:179.00,
+    { id:104, cat:'cues', tier:'mid', name:'Viking A-222 Billiard Cue', desc:'Solid maple, Birdseye accents, consistent 19 oz feel.', price:179.00,
       amzn:amzn('Viking A222 billiard cue'), ebay:ebay('Viking A222 pool cue') },
-    { id:105, cat:'cues', name:'Players HXT15 Low-Deflection Cue', desc:'Budget-friendly HXT shaft, great entry-level upgrade.', price:89.99,
+    { id:105, cat:'cues', tier:'budget', name:'Players HXT15 Low-Deflection Cue', desc:'Budget-friendly HXT shaft, great entry-level upgrade.', price:89.99,
       amzn:amzn('Players HXT15 pool cue'), ebay:ebay('Players HXT15 cue') },
+    { id:106, cat:'cues', tier:'budget', name:'Aska L1 Maple Starter Cue', desc:'Honest one-piece-feel maple cue for new players.', price:39.99,
+      amzn:amzn('Aska L1 maple pool cue'), ebay:ebay('Aska maple pool cue starter') },
     // CASES
-    { id:201, cat:'cases', name:'Predator Roadline 2×4 Hard Case', desc:'Hard shell, airline-safe, holds 2 butts and 4 shafts.', price:129.00,
+    { id:201, cat:'cases', tier:'premium', name:'Predator Roadline 2×4 Hard Case', desc:'Hard shell, airline-safe, holds 2 butts and 4 shafts.', price:129.00,
       amzn:amzn('Predator Roadline 2x4 pool cue case'), ebay:ebay('Predator Roadline 2x4 cue case') },
-    { id:202, cat:'cases', name:'Viper Sinister 2×4 Cue Case', desc:'Durable nylon exterior, lockable zippers, shoulder strap.', price:59.99,
+    { id:202, cat:'cases', tier:'mid', name:'Viper Sinister 2×4 Cue Case', desc:'Durable nylon exterior, lockable zippers, shoulder strap.', price:59.99,
       amzn:amzn('Viper Sinister 2x4 cue case'), ebay:ebay('Viper 2x4 pool cue case') },
-    { id:203, cat:'cases', name:'Casemaster Select 1×1 Soft Case', desc:'Compact padded case for single cue carry.', price:34.99,
+    { id:203, cat:'cases', tier:'budget', name:'Casemaster Select 1×1 Soft Case', desc:'Compact padded case for single cue carry.', price:34.99,
       amzn:amzn('Casemaster Select 1x1 pool cue case'), ebay:ebay('pool cue soft case 1x1') },
-    // ACCESSORIES
-    { id:301, cat:'acc', name:'Aramith Pro-Cup Ball Set', desc:'Belgian phenolic resin, tournament-grade 16-ball set.', price:349.00,
-      amzn:amzn('Aramith Pro Cup billiard ball set'), ebay:ebay('Aramith Pro Cup billiard ball set') },
-    { id:302, cat:'acc', name:'Aramith Super Pro Ball Set', desc:'Superior spin consistency and pocket speed, 16-ball.', price:249.00,
-      amzn:amzn('Aramith Super Pro billiard balls'), ebay:ebay('Aramith Super Pro pool balls') },
-    { id:303, cat:'acc', name:'Molinari Billiard Glove', desc:'3-finger lycra glove for smooth, consistent shaft action.', price:14.99,
+    // GLOVES
+    { id:351, cat:'gloves', tier:'premium', name:'Kamui QuickDry Billiard Glove', desc:'Moisture-wicking pro glove, ultra-smooth bridge stroke.', price:24.99,
+      amzn:amzn('Kamui QuickDry billiard glove'), ebay:ebay('Kamui billiard glove') },
+    { id:303, cat:'gloves', tier:'mid', name:'Molinari Billiard Glove', desc:'3-finger lycra glove for smooth, consistent shaft action.', price:14.99,
       amzn:amzn('Molinari billiard pool glove'), ebay:ebay('billiard pool glove') },
-    { id:304, cat:'acc', name:'Tweeten Tip Tool — 3-in-1', desc:'Tapper, shaper, and scuffer in one compact unit.', price:9.99,
-      amzn:amzn('Tweeten Tip Tool billiard'), ebay:ebay('billiard cue tip tool') },
-    { id:305, cat:'acc', name:'Deluxe Wooden Triangle Rack', desc:'Solid wood with felt lining, 8-ball and 9-ball notches.', price:22.99,
-      amzn:amzn('billiard triangle rack solid wood'), ebay:ebay('billiard pool triangle rack wood') },
-    { id:306, cat:'acc', name:'Mechanical Bridge Head + Shaft', desc:'Chrome shaft with adjustable head for impossible angles.', price:27.99,
+    { id:352, cat:'gloves', tier:'budget', name:'Laperti 3-Finger Pool Glove', desc:'Affordable spandex glove, fits either hand.', price:6.99,
+      amzn:amzn('Laperti 3 finger billiard glove'), ebay:ebay('3 finger pool billiard glove') },
+    // ACCESSORIES
+    { id:301, cat:'acc', tier:'premium', name:'Aramith Pro-Cup Ball Set', desc:'Belgian phenolic resin, tournament-grade 16-ball set.', price:349.00,
+      amzn:amzn('Aramith Pro Cup billiard ball set'), ebay:ebay('Aramith Pro Cup billiard ball set') },
+    { id:302, cat:'acc', tier:'mid', name:'Aramith Super Pro Ball Set', desc:'Superior spin consistency and pocket speed, 16-ball.', price:249.00,
+      amzn:amzn('Aramith Super Pro billiard balls'), ebay:ebay('Aramith Super Pro pool balls') },
+    { id:306, cat:'acc', tier:'mid', name:'Mechanical Bridge Head + Shaft', desc:'Chrome shaft with adjustable head for impossible angles.', price:27.99,
       amzn:amzn('billiard mechanical bridge head shaft'), ebay:ebay('pool mechanical bridge cue') },
+    { id:305, cat:'acc', tier:'budget', name:'Deluxe Wooden Triangle Rack', desc:'Solid wood with felt lining, 8-ball and 9-ball notches.', price:22.99,
+      amzn:amzn('billiard triangle rack solid wood'), ebay:ebay('billiard pool triangle rack wood') },
+    { id:304, cat:'acc', tier:'budget', name:'Tweeten Tip Tool — 3-in-1', desc:'Tapper, shaper, and scuffer in one compact unit.', price:9.99,
+      amzn:amzn('Tweeten Tip Tool billiard'), ebay:ebay('billiard cue tip tool') },
     // CHALK
-    { id:401, cat:'chalk', name:'Kamui Black Chalk', desc:"World's most consistent chalk, ultra-low miscue rate.", price:14.99,
+    { id:401, cat:'chalk', tier:'premium', name:'Kamui Black Chalk', desc:"World's most consistent chalk, ultra-low miscue rate.", price:14.99,
       amzn:amzn('Kamui Black chalk billiard'), ebay:ebay('Kamui Black chalk billiard') },
-    { id:402, cat:'chalk', name:'Master Chalk — 12-Pack', desc:'Classic blue billiard chalk, standard in pro halls.', price:8.99,
+    { id:402, cat:'chalk', tier:'mid', name:'Master Chalk — 12-Pack', desc:'Classic blue billiard chalk, standard in pro halls.', price:8.99,
       amzn:amzn('Master billiard chalk 12 pack'), ebay:ebay('Master billiard chalk 12 pack') },
-    { id:403, cat:'chalk', name:'Silver Cup Chalk — 12-Pack', desc:'Stays on tip longer, available in multiple colors.', price:7.49,
+    { id:403, cat:'chalk', tier:'budget', name:'Silver Cup Chalk — 12-Pack', desc:'Stays on tip longer, available in multiple colors.', price:7.49,
       amzn:amzn('Silver Cup billiard chalk 12 pack'), ebay:ebay('Silver Cup chalk billiard') },
     // TABLES
-    { id:501, cat:'tables', name:'RACK Mojo 7-Ft Pool Table', desc:'Solid wood rails, K-66 cushions, full accessory kit included.', price:849.00,
+    { id:501, cat:'tables', tier:'premium', name:'RACK Mojo 7-Ft Pool Table', desc:'Solid wood rails, K-66 cushions, full accessory kit included.', price:849.00,
       amzn:amzn('RACK Mojo 7ft pool table'), ebay:ebay('7 foot pool table billiard') },
-    { id:502, cat:'tables', name:'Fat Cat Reno 7-Ft Table', desc:'Heavy-duty MDF bed, easy fold legs, play-ready.', price:499.00,
+    { id:502, cat:'tables', tier:'mid', name:'Fat Cat Reno 7-Ft Table', desc:'Heavy-duty MDF bed, easy fold legs, play-ready.', price:499.00,
       amzn:amzn('Fat Cat Reno 7ft billiard table'), ebay:ebay('Fat Cat 7 foot pool table') },
-    { id:503, cat:'tables', name:'MD Sports 48" Tabletop Pool Set', desc:'Compact tabletop set with cues, balls, and chalk.', price:59.99,
+    { id:503, cat:'tables', tier:'budget', name:'MD Sports 48" Tabletop Pool Set', desc:'Compact tabletop set with cues, balls, and chalk.', price:59.99,
       amzn:amzn('MD Sports 48 inch tabletop pool table'), ebay:ebay('tabletop pool billiard table 48 inch') },
 ];
 
-const CAT_COLORS = { cues:'rgba(212,160,23,0.15)', cases:'rgba(52,152,219,0.15)', acc:'rgba(39,174,96,0.15)', chalk:'rgba(155,89,182,0.15)', tables:'rgba(231,76,60,0.15)' };
-const CAT_BORDER = { cues:'rgba(212,160,23,0.45)', cases:'rgba(52,152,219,0.45)', acc:'rgba(39,174,96,0.45)', chalk:'rgba(155,89,182,0.45)', tables:'rgba(231,76,60,0.45)' };
-const CAT_TEXT  = { cues:'var(--gold)', cases:'#5dade2', acc:'var(--green2)', chalk:'#c39bd3', tables:'#f1948a' };
-const CAT_LABEL = { cues:'Cue', cases:'Case', acc:'Accessory', chalk:'Chalk', tables:'Table' };
+const CAT_COLORS = { cues:'rgba(212,160,23,0.15)', cases:'rgba(52,152,219,0.15)', gloves:'rgba(26,107,138,0.15)', acc:'rgba(39,174,96,0.15)', chalk:'rgba(155,89,182,0.15)', tables:'rgba(231,76,60,0.15)' };
+const CAT_BORDER = { cues:'rgba(212,160,23,0.45)', cases:'rgba(52,152,219,0.45)', gloves:'rgba(26,107,138,0.45)', acc:'rgba(39,174,96,0.45)', chalk:'rgba(155,89,182,0.45)', tables:'rgba(231,76,60,0.45)' };
+const CAT_TEXT  = { cues:'var(--gold)', cases:'#5dade2', gloves:'#5fb0c9', acc:'var(--green2)', chalk:'#c39bd3', tables:'#f1948a' };
+const CAT_LABEL = { cues:'Cue', cases:'Case', gloves:'Glove', acc:'Accessory', chalk:'Chalk', tables:'Table' };
+
+// Tier presentation: label shown on the badge + filter, and its accent colour.
+const TIER_META = {
+    budget:  { label:'Budget',  sub:'Beginner',     color:'#27ae60', bg:'rgba(39,174,96,0.18)' },
+    mid:     { label:'Mid',     sub:'Intermediate', color:'#f0c040', bg:'rgba(212,160,23,0.18)' },
+    premium: { label:'Premium', sub:'Pro',          color:'#b06bff', bg:'rgba(176,107,255,0.2)' }
+};
 
 let activeShopCat = 'all';
+let activeShopTier = 'all';
 
 function setShopCat(cat,el){
     document.querySelectorAll('#shop-filters .pill').forEach(p=>p.classList.remove('active'));
     el.classList.add('active'); activeShopCat=cat; renderProducts();
 }
+function setShopTier(tier,el){
+    document.querySelectorAll('#tier-filters .pill').forEach(p=>p.classList.remove('active'));
+    el.classList.add('active'); activeShopTier=tier; renderProducts();
+}
 
 function renderProducts(){
     const g=document.getElementById('products-grid'); if(!g) return;
-    const vis=activeShopCat==='all'?PROD_API_DATA:PROD_API_DATA.filter(p=>p.cat===activeShopCat);
+    let vis=PROD_API_DATA;
+    if(activeShopCat!=='all') vis=vis.filter(p=>p.cat===activeShopCat);
+    if(activeShopTier!=='all') vis=vis.filter(p=>p.tier===activeShopTier);
+    // Sort by tier (budget → premium) so the cheapest options surface first
+    const tOrder={budget:0,mid:1,premium:2};
+    vis=vis.slice().sort((a,b)=>(tOrder[a.tier]-tOrder[b.tier]) || (a.price-b.price));
+    if(!vis.length){ g.innerHTML='<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:12px;padding:20px;">No gear in this tier yet — try another filter.</p>'; return; }
     const btnBase='display:inline-block;padding:8px 0;border-radius:7px;font-family:\'DM Mono\',monospace;font-size:11px;font-weight:700;text-decoration:none;text-align:center;letter-spacing:0.5px;flex:1;';
     g.innerHTML=vis.map(p=>{
         const bg=CAT_COLORS[p.cat]||'rgba(255,255,255,0.03)';
         const bd=CAT_BORDER[p.cat]||'var(--borderg)';
         const tc=CAT_TEXT[p.cat]||'var(--gold)';
         const lb=CAT_LABEL[p.cat]||p.cat;
+        const tm=TIER_META[p.tier]||TIER_META.mid;
         return '<div class="card" style="padding:16px;background:'+bg+';border-color:'+bd+';">'
-            +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+            +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;">'
+            +'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">'
             +'<span style="font-family:\'DM Mono\';font-size:9px;letter-spacing:2px;text-transform:uppercase;color:'+tc+';background:rgba(0,0,0,0.25);padding:3px 8px;border-radius:4px;border:1px solid '+bd+';">'+lb+'</span>'
-            +'<span style="color:var(--gold);font-family:\'DM Mono\';font-size:15px;font-weight:700;">$'+p.price.toFixed(2)+'</span>'
+            +'<span style="font-family:\'DM Mono\';font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:700;color:'+tm.color+';background:'+tm.bg+';padding:3px 8px;border-radius:4px;">'+tm.label+' · '+tm.sub+'</span>'
+            +'</div>'
+            +'<span style="color:var(--gold);font-family:\'DM Mono\';font-size:15px;font-weight:700;white-space:nowrap;">$'+p.price.toFixed(2)+'</span>'
             +'</div>'
             +'<div style="font-family:\'Playfair Display\';color:var(--ivory);font-size:15px;margin-bottom:6px;">'+p.name+'</div>'
             +'<div style="font-family:\'Libre Baskerville\',serif;font-size:12px;color:var(--dim);margin-bottom:14px;line-height:1.5;">'+p.desc+'</div>'
