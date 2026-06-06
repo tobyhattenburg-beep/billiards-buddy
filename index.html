@@ -140,6 +140,17 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
 /* SHOT CLOCK URGENCY */
 @keyframes clock-urgent{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 .clock-urgent{animation:clock-urgent 0.45s ease-in-out infinite;}
+/* Phase 5 — speed drill */
+.speed-stage{border-radius:14px;min-height:120px;display:flex;align-items:center;justify-content:center;text-align:center;padding:18px;font-family:'DM Mono',monospace;font-size:15px;cursor:pointer;transition:background 0.05s,color 0.05s;line-height:1.5;border:1px solid var(--borderg);user-select:none;}
+.speed-stage.waiting{background:rgba(0,0,0,0.3);color:var(--dim);}
+.speed-stage.ready{background:rgba(192,57,43,0.85);color:#fff;font-weight:700;}
+.speed-stage.go{background:var(--green2);color:#06210e;font-weight:800;font-size:40px;letter-spacing:2px;}
+.speed-stage.result{background:rgba(212,160,23,0.12);color:var(--ivory);}
+.speed-stage.foul{background:rgba(192,57,43,0.25);color:#f1948a;font-weight:700;}
+.speed-stage .big-time{font-family:'DM Mono',monospace;font-size:42px;font-weight:800;color:var(--gold2);display:block;}
+.sp-badge{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.3);border:1px solid var(--borderg);border-radius:20px;padding:5px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--ivory);}
+.sp-badge.locked{opacity:0.4;}
+.sp-badge .ic{font-size:15px;}
 /* POOL GAME */
 #game-viewport{border-radius:10px;overflow:hidden;position:relative;background:#000;}
 #game-canvas{display:block;touch-action:none;cursor:crosshair;width:100%;}
@@ -413,6 +424,19 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
             <button class="btn btn-felt" onclick="resetClock()" style="padding:12px 28px;">Reset</button>
           </div>
         </div>
+
+        <!-- Phase 5 — Speed Drill -->
+        <div class="card" style="padding:18px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-family:'DM Mono';font-size:10px;letter-spacing:2px;color:var(--gold);text-transform:uppercase;">&#9889; Speed Drill</div>
+            <div style="font-family:'DM Mono';font-size:11px;color:var(--dim);">Best <b id="sp-best" style="color:var(--green2);">—</b> · <b id="sp-points" style="color:var(--gold2);">0</b> pts</div>
+          </div>
+          <div id="speed-stage" class="speed-stage waiting" onclick="speedTap()">Tap <b>Start Drill</b>, then strike the instant it turns green.</div>
+          <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;">
+            <button class="btn btn-gold" id="sp-start" onclick="speedStart()" style="padding:11px 26px;font-weight:bold;">Start Drill</button>
+          </div>
+          <div id="speed-badges" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px;justify-content:center;"></div>
+        </div>
       </div></div>
     </div>
 
@@ -481,6 +505,7 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
         <div id="lb-tabs" style="display:flex;gap:8px;padding:0 16px 8px;flex-shrink:0;">
           <div class="pill active" onclick="setLbMetric('skill',this)">Skill Rating</div>
           <div class="pill" onclick="setLbMetric('wins',this)">Wins</div>
+          <div class="pill" onclick="setLbMetric('speed',this)">&#9889; Fastest</div>
         </div>
         <div id="leaderboard" style="flex-shrink:0;padding:0 6px 10px;"></div>
         <div style="padding:6px 16px;flex-shrink:0;"><div class="eyebrow">Live Chat</div></div>
@@ -565,6 +590,18 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
           <div class="stat-card"><div class="stat-value" id="stat-hours">0</div><div class="stat-label">Hours</div></div>
           <div class="stat-card"><div class="stat-value" id="stat-shots">0</div><div class="stat-label">Shots Timed</div></div>
           <div class="stat-card"><div class="stat-value" id="stat-tournaments">0</div><div class="stat-label">Events Run</div></div>
+        </div>
+        <div class="card" style="padding:18px;margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div style="font-family:'DM Mono';font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;">&#9889; Speed Records</div>
+            <div style="font-family:'DM Mono';font-size:11px;color:var(--dim);">Fastest <b id="pf-sp-best" style="color:var(--green2);">—</b> · Global <b id="pf-sp-rank" style="color:var(--gold2);">#—</b></div>
+          </div>
+          <div class="grid-3" style="margin-bottom:12px;">
+            <div class="stat-card"><div class="stat-value" id="pf-sp-drills">0</div><div class="stat-label">Drills</div></div>
+            <div class="stat-card"><div class="stat-value" id="pf-sp-points">0</div><div class="stat-label">Speed Pts</div></div>
+            <div class="stat-card"><div class="stat-value" id="pf-sp-badgecount">0</div><div class="stat-label">Badges</div></div>
+          </div>
+          <div id="pf-sp-badges" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
         </div>
         <div class="card" style="padding:20px;margin-bottom:14px;">
           <div style="font-family:'DM Mono';font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px;">Update Identity</div>
@@ -822,6 +859,7 @@ function showScreen(id) {
         setTimeout(function() { window._leafletMap.invalidateSize(); }, 150);
     }
     if (id === 'community') { initCommunity(); }
+    if (id === 'timer') { renderSpeed(); }
     if (id === 'analyzer') { initAnalyzer(); }
     if (prev === 'analyzer' && id !== 'analyzer') { stopAnalyzer(); }
     if (id === 'game') { initGame(); }
@@ -848,6 +886,21 @@ if (!userProfile.favoriteVenues) userProfile.favoriteVenues = [];
 if (typeof userProfile.skill !== 'number') userProfile.skill = 1000;
 if (typeof userProfile.stats.gamesLost !== 'number') userProfile.stats.gamesLost = 0;
 if (!userProfile.avatarSeed) userProfile.avatarSeed = userProfile.name || 'player';
+// Phase 5 — shot-speed gamification
+if (!userProfile.speed) userProfile.speed = { best:null, drills:0, points:0, badges:[] };
+
+// Speed-drill achievement badges. `t` is reaction time in seconds; `c` is total drills.
+const SPEED_BADGES = [
+    { id:'sharp',     name:'Sharp Reflexes', icon:'⚡', desc:'A shot under 0.55s',          test:function(t,c){ return t<0.55; } },
+    { id:'pro',       name:'Pro Speed',      icon:'🎯', desc:'Pro benchmark — under 0.40s', test:function(t,c){ return t<0.40; } },
+    { id:'lightning', name:'Lightning Quick',icon:'🌩️', desc:'Sub-0.30s reaction',          test:function(t,c){ return t<0.30; } },
+    { id:'quickdraw', name:'Quick Draw',     icon:'🤠', desc:'Complete 10 speed drills',    test:function(t,c){ return c>=10; } },
+    { id:'demon',     name:'Speed Demon',    icon:'🔥', desc:'Complete 50 speed drills',    test:function(t,c){ return c>=50; } }
+];
+function speedBadge(id){ for(var i=0;i<SPEED_BADGES.length;i++) if(SPEED_BADGES[i].id===id) return SPEED_BADGES[i]; return null; }
+function awardSpeedBadges(t){ var earned=[]; SPEED_BADGES.forEach(function(b){
+    if(userProfile.speed.badges.indexOf(b.id)<0 && b.test(t, userProfile.speed.drills)){ userProfile.speed.badges.push(b.id); earned.push(b); } });
+    return earned; }
 
 // Rank tiers derived from skill rating
 const RANKS = [
@@ -889,6 +942,16 @@ function updateProfileUI() {
     set('stat-hours', Math.round((userProfile.stats.practiceHours||0) * 10) / 10);
     set('stat-shots', userProfile.stats.shotsTimed || 0);
     set('stat-tournaments', userProfile.stats.tournamentsRun || 0);
+    // Speed records
+    var spd = userProfile.speed || { best:null, drills:0, points:0, badges:[] };
+    set('pf-sp-best', spd.best==null ? '—' : spd.best.toFixed(3)+'s');
+    set('pf-sp-rank', spd.best==null ? '#—' : '#'+playerGlobalRank('speed'));
+    set('pf-sp-drills', spd.drills||0);
+    set('pf-sp-points', spd.points||0);
+    set('pf-sp-badgecount', (spd.badges||[]).length);
+    var spb=document.getElementById('pf-sp-badges');
+    if(spb){ spb.innerHTML = (spd.badges&&spd.badges.length) ? spd.badges.map(function(id){ var b=speedBadge(id); return b?'<span class="sp-badge"><span class="ic">'+b.icon+'</span>'+b.name+'</span>':''; }).join('')
+        : '<span style="font-family:\'DM Mono\';font-size:11px;color:var(--dim);">No badges yet — run a Speed Drill in the Shot Clock.</span>'; }
     // Saved venues
     const favCountEl = document.getElementById('fav-count');
     const favListEl = document.getElementById('fav-venues-list');
@@ -1325,6 +1388,48 @@ function playClockTick(){
         g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.06);
         o.start(ctx.currentTime);o.stop(ctx.currentTime+0.07);
     }catch(e){}
+}
+
+// ════════════════════════════════════════════════════════
+// SPEED DRILL (Phase 5) — reaction-time shot speed
+// ════════════════════════════════════════════════════════
+var _spState='idle', _spStart=0, _spTimer=null;
+function setSpStage(cls, html){ var s=document.getElementById('speed-stage'); if(!s) return; s.className='speed-stage '+cls; s.innerHTML=html; }
+function speedPoints(t){ return Math.max(10, Math.round((1.2 - t) * 800)); }
+function fmtSpeed(t){ return (t==null) ? '—' : t.toFixed(3)+'s'; }
+function speedStart(){
+    if(_spState==='ready' || _spState==='go') return;          // already armed
+    _spState='ready'; setSpStage('ready','Wait for it… don’t jump early!');
+    var delay = 1400 + Math.random()*2400;
+    _spTimer = setTimeout(function(){ _spState='go'; _spStart=performance.now(); setSpStage('go','SHOOT!'); playClockTick(); }, delay);
+}
+function speedTap(){
+    if(_spState==='ready'){ clearTimeout(_spTimer); _spState='idle'; setSpStage('foul','⚠ Too early! Tap <b>Start Drill</b> to retry.'); return; }
+    if(_spState==='go'){ var t=(performance.now()-_spStart)/1000; _spState='idle'; recordSpeed(t); }
+}
+function recordSpeed(t){
+    var sp=userProfile.speed;
+    sp.drills += 1;
+    var isBest = (sp.best==null || t < sp.best); if(isBest) sp.best = t;
+    var pts = speedPoints(t); sp.points += pts;
+    var earned = awardSpeedBadges(t);
+    saveProfile(); publishLeaderboardEntry();
+    var msg = '<span class="big-time">'+t.toFixed(3)+'s</span>'
+        + '<div style="margin-top:4px;">+'+pts+' pts'+(isBest?' · ⭐ New best!':'')+' — tap <b>Start Drill</b> again</div>';
+    setSpStage('result', msg);
+    renderSpeed();
+    if(earned.length){ earned.forEach(function(b){ showToast(b.icon+' Badge unlocked: '+b.name,'gold'); }); }
+    else if(isBest){ showToast('⭐ New personal best: '+t.toFixed(3)+'s','success'); }
+}
+function renderSpeed(){
+    var sp=userProfile.speed;
+    var be=document.getElementById('sp-best'); if(be) be.textContent=fmtSpeed(sp.best);
+    var pe=document.getElementById('sp-points'); if(pe) pe.textContent=sp.points;
+    var bg=document.getElementById('speed-badges');
+    if(bg){ bg.innerHTML = SPEED_BADGES.map(function(b){
+        var got = sp.badges.indexOf(b.id)>=0;
+        return '<span class="sp-badge'+(got?'':' locked')+'" title="'+b.desc+'"><span class="ic">'+b.icon+'</span>'+b.name+'</span>';
+    }).join(''); }
 }
 
 // ════════════════════════════════════════════════════════
@@ -1937,35 +2042,36 @@ function listenFeed(){ try{ if(!_fbDb) return;
 var _lbMetric = 'skill';
 var _lbRemote = {}; // real players from other devices, keyed by Firebase uid
 const LB_SEED = [
-    { name:'Vince "Vegas" Calloway', skill:2010, wins:184 },
-    { name:'Mia Park',               skill:1940, wins:171 },
-    { name:'Sharkey Malone',         skill:1880, wins:158 },
-    { name:'The Duchess',            skill:1820, wins:149 },
-    { name:'Coach Delgado',          skill:1760, wins:140 },
-    { name:'Nova Rey',               skill:1690, wins:128 },
-    { name:'Tank Romano',            skill:1610, wins:113 },
-    { name:'Lola Quick',             skill:1540, wins:102 },
-    { name:'Doc Banks',              skill:1470, wins:88 },
-    { name:'Sticks Malone',          skill:1390, wins:73 },
-    { name:'Ricky Diaz',             skill:1300, wins:61 },
-    { name:'Jojo Banks',             skill:1190, wins:44 },
-    { name:'Pip Turner',             skill:1060, wins:29 }
+    { name:'Vince "Vegas" Calloway', skill:2010, wins:184, speed:0.29 },
+    { name:'Mia Park',               skill:1940, wins:171, speed:0.31 },
+    { name:'Sharkey Malone',         skill:1880, wins:158, speed:0.34 },
+    { name:'The Duchess',            skill:1820, wins:149, speed:0.38 },
+    { name:'Coach Delgado',          skill:1760, wins:140, speed:0.42 },
+    { name:'Nova Rey',               skill:1690, wins:128, speed:0.45 },
+    { name:'Tank Romano',            skill:1610, wins:113, speed:0.49 },
+    { name:'Lola Quick',             skill:1540, wins:102, speed:0.33 },
+    { name:'Doc Banks',              skill:1470, wins:88,  speed:0.52 },
+    { name:'Sticks Malone',          skill:1390, wins:73,  speed:0.55 },
+    { name:'Ricky Diaz',             skill:1300, wins:61,  speed:0.58 },
+    { name:'Jojo Banks',             skill:1190, wins:44,  speed:0.61 },
+    { name:'Pip Turner',             skill:1060, wins:29,  speed:0.66 }
 ];
 function leaderboardData(metric){
-    var rows = LB_SEED.map(function(p){ return { name:p.name, skill:p.skill, wins:p.wins, seed:p.name, uid:null, you:false }; });
+    var rows = LB_SEED.map(function(p){ return { name:p.name, skill:p.skill, wins:p.wins, speed:p.speed, seed:p.name, uid:null, you:false }; });
     for (var uid in _lbRemote){ if(!_lbRemote.hasOwnProperty(uid)) continue;
         if (_fbUser && uid === _fbUser.uid) continue; // our own entry comes from the live profile below
         var e = _lbRemote[uid]; if(!e || !e.name) continue;
-        rows.push({ name:e.name, skill:e.skill||1000, wins:e.wins||0, seed:e.seed||e.name, uid:uid, you:false });
+        rows.push({ name:e.name, skill:e.skill||1000, wins:e.wins||0, speed:e.speedBest||null, seed:e.seed||e.name, uid:uid, you:false });
     }
-    rows.push({ name:userProfile.name||'You', skill:userProfile.skill, wins:userProfile.stats.gamesWon||0, seed:userProfile.avatarSeed||userProfile.name, uid:(_fbUser?_fbUser.uid:null), you:true });
-    rows.sort(function(a,b){ return (b[metric]||0) - (a[metric]||0); });
+    rows.push({ name:userProfile.name||'You', skill:userProfile.skill, wins:userProfile.stats.gamesWon||0, speed:(userProfile.speed?userProfile.speed.best:null), seed:userProfile.avatarSeed||userProfile.name, uid:(_fbUser?_fbUser.uid:null), you:true });
+    if (metric==='speed') rows.sort(function(a,b){ var av=(a.speed==null?Infinity:a.speed), bv=(b.speed==null?Infinity:b.speed); return av-bv; }); // fastest first, untimed last
+    else rows.sort(function(a,b){ return (b[metric]||0) - (a[metric]||0); });
     return rows;
 }
 function playerGlobalRank(metric){ var rows=leaderboardData(metric||'skill'); for(var i=0;i<rows.length;i++) if(rows[i].you) return i+1; return rows.length; }
 var _lbRows = [];
 function lbRowHtml(p, rank, metric, idx){
-    var val = metric==='skill' ? (p.skill + ' SR') : (p.wins + ' W');
+    var val = metric==='skill' ? (p.skill + ' SR') : metric==='speed' ? (p.speed==null?'—':p.speed.toFixed(3)+'s') : (p.wins + ' W');
     return '<div class="lb-row' + (rank===1?' top1':'') + (p.you?' you':'') + '">'
         + '<div class="lb-rank">' + rank + '</div>'
         + '<div class="lb-av" style="background-image:url(\'' + avatarUrl(p.seed) + '\');"></div>'
@@ -1989,7 +2095,7 @@ function setLbMetric(m, el){ _lbMetric=m;
 }
 // Best-effort global sync (Firebase). No-ops cleanly if chat isn't connected.
 function publishLeaderboardEntry(){ try{ if(_fbDb && _fbUser){
-    _fbDb.ref('leaderboard/'+_fbUser.uid).set({ name:userProfile.name||'Player', skill:userProfile.skill||1000, wins:userProfile.stats.gamesWon||0, seed:userProfile.avatarSeed||userProfile.name, t:Date.now() });
+    _fbDb.ref('leaderboard/'+_fbUser.uid).set({ name:userProfile.name||'Player', skill:userProfile.skill||1000, wins:userProfile.stats.gamesWon||0, speedBest:(userProfile.speed?userProfile.speed.best:null), seed:userProfile.avatarSeed||userProfile.name, t:Date.now() });
 } }catch(e){} }
 function syncLeaderboard(){ try{ if(!_fbDb) return;
     _fbDb.ref('leaderboard').on('value', function(snap){ _lbRemote = snap.val()||{}; renderLeaderboard();
@@ -2933,6 +3039,7 @@ window.onload = function() {
     setScreenBackground('home');
     var gv = document.getElementById('game-viewport'); if (gv) { gv.style.backgroundImage = "url('" + IMG.table + "')"; }
     updateNotifBadge();
+    renderSpeed();
     const locEl = document.getElementById('location-status');
     var isSecure = window.location.protocol === 'https:'
         || window.location.hostname === 'localhost'
