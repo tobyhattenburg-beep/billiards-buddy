@@ -238,6 +238,17 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
 .rank-badge{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;letter-spacing:1px;padding:3px 10px;border-radius:20px;color:#0a0b0d;background:var(--gold);text-transform:uppercase;}
 .rank-track{height:8px;border-radius:5px;background:rgba(0,0,0,0.45);border:1px solid var(--borderg);overflow:hidden;}
 .rank-bar{height:100%;width:0%;background:var(--gold);transition:width .4s;box-shadow:0 0 8px rgba(255,210,74,0.5);}
+/* Tournaments (Phase 9) */
+.t-in{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--borderg);color:var(--ivory);padding:10px 12px;border-radius:8px;margin-bottom:10px;outline:none;font-family:'DM Mono',monospace;font-size:13px;}
+.t-round{display:flex;flex-direction:column;gap:18px;justify-content:space-around;flex-shrink:0;}
+.t-match{border:1px solid var(--borderg);border-radius:8px;overflow:hidden;width:130px;background:rgba(0,0,0,0.3);}
+.t-slot{padding:7px 9px;font-family:'DM Mono',monospace;font-size:11px;color:var(--ivory);border-bottom:1px solid rgba(30,92,42,0.4);cursor:pointer;display:flex;justify-content:space-between;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.t-slot:last-child{border-bottom:none;} .t-slot:hover{background:rgba(212,160,23,0.12);}
+.t-slot.win{color:var(--gold2);background:rgba(212,160,23,0.14);font-weight:700;}
+.t-slot.bye{color:var(--dim);font-style:italic;cursor:default;}
+.t-slot.tbd{color:var(--dim);cursor:default;}
+.t-disc{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--borderg);border-radius:10px;margin-bottom:10px;background:rgba(255,255,255,0.02);}
+.t-disc .ic{font-size:22px;flex-shrink:0;}
 /* Highlights feed (Phase 3) */
 .feed-card{flex:0 0 150px;height:96px;border-radius:10px;background-size:cover;background-position:center;border:1px solid var(--borderg);position:relative;overflow:hidden;cursor:pointer;background-color:#0d3316;}
 .feed-card .feed-play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:26px;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.8);}
@@ -366,15 +377,24 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
 
     <!-- BRACKETS -->
     <div class="screen" id="screen-bracket">
-      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Tournament Grid</div><h2>Brackets Engine</h2></div>
+      <div class="glass-overlay"><div class="page-header"><div class="eyebrow">Tournament Grid</div><h2>Tournaments</h2></div>
       <div class="content">
-        <div class="card gold-card" style="padding:15px;margin-bottom:20px;">
-          <div style="display:flex;gap:10px;">
-            <input type="number" id="player-count" value="4" min="2" max="16" style="width:60px;background:rgba(0,0,0,0.3);border:1px solid var(--dim);color:var(--ivory);padding:8px;border-radius:6px;outline:none;font-family:'DM Mono';text-align:center;">
-            <button class="btn btn-gold" onclick="generateBracket()" style="flex-grow:1;font-weight:bold;padding:10px;border-radius:6px;">Generate 8-Ball Tree</button>
+        <div class="card gold-card" style="padding:16px;margin-bottom:16px;">
+          <div class="eyebrow" style="margin-bottom:12px;">Create a Tournament</div>
+          <input type="text" id="t-name" placeholder="Tournament name (e.g. Friday Night Open)" class="t-in">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <select id="t-game" class="t-in"><option value="8-Ball">8-Ball</option><option value="9-Ball">9-Ball</option><option value="Snooker">Snooker</option></select>
+            <select id="t-format" class="t-in"><option value="Single Elim">Single Elimination</option><option value="Double Elim">Double Elimination</option></select>
+            <input type="date" id="t-date" class="t-in">
+            <input type="text" id="t-venue" placeholder="Venue" class="t-in">
+            <input type="text" id="t-prize" placeholder="Entry / Prize (e.g. $20 / $200)" class="t-in" style="grid-column:1 / -1;">
           </div>
+          <textarea id="t-players" placeholder="Players, comma-separated (e.g. You, Mia, Tank, Lola)" class="t-in" style="height:58px;resize:vertical;"></textarea>
+          <button class="btn btn-gold" onclick="createTournament()" style="width:100%;padding:12px;font-weight:bold;">&#127942; Create &amp; Seed Bracket</button>
         </div>
-        <div id="bracket-display"></div>
+        <div id="bracket-display" style="margin-bottom:18px;"></div>
+        <div class="eyebrow" style="margin-bottom:10px;">&#128270; Discover Tournaments Near You</div>
+        <div id="tourney-discover"></div>
       </div></div>
     </div>
 
@@ -878,6 +898,7 @@ function showScreen(id) {
     if (id === 'community') { initCommunity(); }
     if (id === 'timer') { renderSpeed(); }
     if (id === 'score') { renderMatchPending(); }
+    if (id === 'bracket') { renderDiscover(); }
     if (id === 'analyzer') { initAnalyzer(); }
     if (prev === 'analyzer' && id !== 'analyzer') { stopAnalyzer(); }
     if (id === 'game') { initGame(); }
@@ -1441,19 +1462,103 @@ function loadVideo(id){
 // ════════════════════════════════════════════════════════
 // BRACKETS
 // ════════════════════════════════════════════════════════
-function generateBracket(){
-    const count=parseInt(document.getElementById('player-count').value);
-    const display=document.getElementById('bracket-display');
-    let html='<div style="display:flex;gap:20px;align-items:center;padding:15px;background:rgba(0,0,0,0.2);border-radius:8px;overflow-x:auto;"><div style="display:flex;flex-direction:column;gap:15px;">';
-    for(let i=1;i<=count;i+=2){
-        html+='<div style="border-left:2px solid var(--gold);padding-left:8px;">'
-            +'<div style="background:rgba(255,255,255,0.05);padding:6px;font-size:10px;width:110px;margin-bottom:4px;font-family:\'DM Mono\';">Seed '+i+'</div>'
-            +'<div style="background:rgba(255,255,255,0.05);padding:6px;font-size:10px;width:110px;font-family:\'DM Mono\';">'+(i+1<=count?'Seed '+(i+1):'BYE')+'</div></div>';
+var _tourney = null;
+const TOURNEY_SEED = [
+    { name:'Friday Night 8-Ball Open', game:'8-Ball', venue:'The Corner Pocket', date:'this Fri', spots:4, prize:'$20 / $160' },
+    { name:'Downtown 9-Ball Shootout', game:'9-Ball', venue:'Side Pocket Lounge', date:'next Sat', spots:7, prize:'$30 / $400' },
+    { name:'Sunday Snooker Classic',   game:'Snooker', venue:'The Velvet Lounge', date:'Sun', spots:2, prize:'Free entry' }
+];
+function _seedRounds(players){
+    var n=1; while(n<players.length) n*=2; if(n<2)n=2;
+    var slots=players.slice(); while(slots.length<n) slots.push('BYE');
+    var r0=[]; for(var i=0;i<n;i+=2){ var a=slots[i], b=slots[i+1];
+        r0.push({ a:a, b:b, winner:(b==='BYE'&&a!=='BYE')?a:((a==='BYE'&&b!=='BYE')?b:null) }); }
+    var rounds=[r0], cnt=n/2;
+    while(cnt>=1 && rounds[rounds.length-1].length>1){ var rd=[]; for(var j=0;j<rounds[rounds.length-1].length/2;j++) rd.push({a:null,b:null,winner:null}); rounds.push(rd); }
+    _propagate(rounds);
+    return rounds;
+}
+function _propagate(rounds){
+    for(var r=0;r<rounds.length-1;r++){ for(var m=0;m<rounds[r].length;m++){
+        var w=rounds[r][m].winner, nm=rounds[r+1][Math.floor(m/2)];
+        if(m%2===0) nm.a=w; else nm.b=w;
     }
-    html+='</div><div style="color:var(--gold);font-weight:bold;">→</div><div style="font-family:\'DM Mono\';font-size:11px;color:var(--dim);">Round 2 Generated</div></div>';
-    display.innerHTML=html;
-    userProfile.stats.tournamentsRun = (userProfile.stats.tournamentsRun||0) + 1;
-    saveProfile();
+    rounds[r+1].forEach(function(mt){ if(mt.winner) return; if(mt.a==='BYE'&&mt.b&&mt.b!=='BYE') mt.winner=mt.b; if(mt.b==='BYE'&&mt.a&&mt.a!=='BYE') mt.winner=mt.a; }); }
+}
+function createTournament(){
+    var name=(document.getElementById('t-name').value||'').trim();
+    var players=(document.getElementById('t-players').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    if(!name){ showToast('Give the tournament a name.','gold'); return; }
+    if(players.length<2){ showToast('Add at least 2 players (comma-separated).','gold'); return; }
+    _tourney = { name:name, game:document.getElementById('t-game').value, format:document.getElementById('t-format').value,
+        date:document.getElementById('t-date').value, venue:(document.getElementById('t-venue').value||'').trim(),
+        prize:(document.getElementById('t-prize').value||'').trim(), players:players, rounds:_seedRounds(players), champion:null };
+    userProfile.stats.tournamentsRun = (userProfile.stats.tournamentsRun||0)+1; saveProfile();
+    renderBracket();
+    showToast('🏆 '+name+' created — tap a player to advance them.','success');
+}
+function pickWinner(r,m,slot){
+    if(!_tourney) return; var mt=_tourney.rounds[r][m];
+    var who = slot==='a'?mt.a:mt.b;
+    if(!who || who==='BYE' || (mt.a&&mt.a!=='BYE'&&mt.b&&mt.b!=='BYE')===false && (!mt.a||!mt.b)) { if(!who||who==='BYE') return; }
+    if(!mt.a || !mt.b || mt.a==='BYE' || mt.b==='BYE') return; // both real players needed
+    mt.winner = who;
+    _propagate(_tourney.rounds);
+    var last=_tourney.rounds[_tourney.rounds.length-1][0];
+    _tourney.champion = last.winner || null;
+    renderBracket();
+    if(_tourney.champion) showToast('🏆 Champion: '+_tourney.champion+'!','gold');
+}
+function renderBracket(){
+    var d=document.getElementById('bracket-display'); if(!d) return;
+    if(!_tourney){ d.innerHTML=''; return; }
+    var t=_tourney;
+    var head='<div class="card" style="padding:14px;margin-bottom:12px;border:1px solid var(--gold);">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">'
+        +'<div><div style="font-family:\'Playfair Display\';color:var(--ivory);font-size:18px;">'+escCom(t.name)+'</div>'
+        +'<div style="font-family:\'DM Mono\';font-size:10px;color:var(--dim);margin-top:3px;">'+t.game+' · '+t.format+(t.venue?(' · '+escCom(t.venue)):'')+(t.date?(' · '+t.date):'')+(t.prize?(' · '+escCom(t.prize)):'')+'</div></div>'
+        +'<button class="btn btn-felt" onclick="shareTournament()" style="padding:7px 12px;font-size:11px;flex-shrink:0;">&#128279; Share</button></div>'
+        +(t.champion?'<div style="margin-top:10px;font-family:\'DM Mono\';font-size:12px;color:var(--gold2);">&#127942; Champion: <b>'+escCom(t.champion)+'</b></div>':'')
+        +'</div>';
+    var cols='';
+    t.rounds.forEach(function(round,ri){
+        var matches=round.map(function(mt,mi){
+            function slot(which){ var nm=which==='a'?mt.a:mt.b; var cls='t-slot';
+                if(nm==='BYE') cls+=' bye'; else if(!nm) { cls+=' tbd'; nm='TBD'; }
+                else if(mt.winner===nm) cls+=' win';
+                var click=(nm!=='BYE'&&nm!=='TBD'&&mt.a&&mt.b&&mt.a!=='BYE'&&mt.b!=='BYE')?(' onclick="pickWinner('+ri+','+mi+',\''+which+'\')"'):'';
+                return '<div class="'+cls+'"'+click+'><span>'+escCom(nm)+'</span>'+(mt.winner===nm?'<span>&#10003;</span>':'')+'</div>';
+            }
+            return '<div class="t-match">'+slot('a')+slot('b')+'</div>';
+        }).join('');
+        var rname = ri===t.rounds.length-1?'Final':(round.length===2?'Semis':'Round '+(ri+1));
+        cols += '<div class="t-round"><div style="font-family:\'DM Mono\';font-size:9px;letter-spacing:1px;color:var(--gold);text-transform:uppercase;text-align:center;">'+rname+'</div>'+matches+'</div>';
+    });
+    d.innerHTML = head + '<div style="display:flex;gap:18px;overflow-x:auto;padding:6px 2px 12px;">'+cols+'</div>';
+}
+function shareTournament(){
+    if(!_tourney) return;
+    var url=location.origin+location.pathname+'#tournament='+encodeURIComponent(_tourney.name);
+    var text=_tourney.name+' — '+_tourney.game+(_tourney.venue?(' @ '+_tourney.venue):'')+'. Join us on Billiards Buddy!';
+    if(navigator.share){ navigator.share({ title:_tourney.name, text:text, url:url }).catch(function(){}); }
+    else if(navigator.clipboard){ navigator.clipboard.writeText(text+' '+url).then(function(){ showToast('🔗 Invite link copied to clipboard!','success'); }).catch(function(){ showToast(url,'info'); }); }
+    else showToast(url,'info');
+}
+function renderDiscover(){
+    var d=document.getElementById('tourney-discover'); if(!d) return;
+    d.innerHTML = TOURNEY_SEED.map(function(t,i){
+        var icon=t.game==='Snooker'?'🎯':t.game==='9-Ball'?'9️⃣':'🎱';
+        return '<div class="t-disc"><span class="ic">'+icon+'</span>'
+            +'<div style="flex:1;min-width:0;"><div style="font-family:\'Playfair Display\';color:var(--ivory);font-size:14px;">'+t.name+'</div>'
+            +'<div style="font-family:\'DM Mono\';font-size:10px;color:var(--dim);">'+t.venue+' · '+t.date+' · '+t.prize+' · '+t.spots+' spots left</div></div>'
+            +'<button class="btn btn-gold" onclick="joinTournament('+i+')" style="padding:7px 14px;font-size:11px;flex-shrink:0;">Join</button></div>';
+    }).join('');
+}
+function joinTournament(i){
+    var t=TOURNEY_SEED[i]; if(!t) return;
+    if(t.spots<=0){ showToast('That tournament is full.','gold'); return; }
+    t.spots--; renderDiscover();
+    showToast('✅ You’re in: '+t.name+' — see you at '+t.venue+'!','success');
 }
 
 // ════════════════════════════════════════════════════════
@@ -3240,6 +3345,7 @@ window.onload = function() {
     var gv = document.getElementById('game-viewport'); if (gv) { gv.style.backgroundImage = "url('" + IMG.table + "')"; }
     updateNotifBadge();
     renderSpeed();
+    renderDiscover();
     const locEl = document.getElementById('location-status');
     var isSecure = window.location.protocol === 'https:'
         || window.location.hostname === 'localhost'
