@@ -7,7 +7,7 @@
 // and the old cache is purged on activate.
 // ============================================================
 
-const CACHE_NAME = 'bb-cache-v14';
+const CACHE_NAME = 'bb-cache-v15';
 
 const PRECACHE_URLS = [
   './',

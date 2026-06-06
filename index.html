@@ -355,7 +355,8 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
-          <div class="pill active" onclick="filterLessons('Beginner',this)">Beginner</div>
+          <div class="pill active" onclick="filterLessons('All',this)">All</div>
+          <div class="pill" onclick="filterLessons('Beginner',this)">Beginner</div>
           <div class="pill" onclick="filterLessons('Intermediate',this)">Intermediate</div>
           <div class="pill" onclick="filterLessons('Advanced',this)">Advanced</div>
         </div>
@@ -1279,23 +1280,36 @@ function renderTips() {
 // ════════════════════════════════════════════════════════
 // ACADEMY
 // ════════════════════════════════════════════════════════
+// Curated, verified instructional library — beginner basics → intermediate shot-making → advanced strategy.
 const LESSON_DATA = [
-    {id:1, ytId:"glmwCJs6MIA", title:"Stance, Grip & Stroke Basics", level:"Beginner", duration:"12:04"},
-    {id:2, ytId:"YIsEqTna2Ao", title:"10 Years of Pool Knowledge", level:"Beginner", duration:"18:32"},
-    {id:3, ytId:"DpO3CCIibZQ", title:"When to Use Spin and Draw", level:"Intermediate", duration:"9:47"},
-    {id:4, ytId:"Dn1QzfOvk8I", title:"Power Draw Shot — Full Guide", level:"Intermediate", duration:"11:20"},
-    {id:5, ytId:"Ru3TLipXKvw", title:"Inside Spin Draw (Advanced)", level:"Advanced", duration:"14:55"},
-    {id:6, ytId:"f1vn9kbHXDo", title:"The Most Important Shot in Pool", level:"Advanced", duration:"16:08"}
+    {id:1, ytId:"glmwCJs6MIA", title:"Stance, Grip & Stroke Basics", level:"Beginner", duration:"12:04", topic:"Fundamentals", desc:"The three pillars every player needs — feet, bridge, and a straight, repeatable stroke."},
+    {id:2, ytId:"bosPR6gcoH0", title:"The Stance — Pool School", level:"Beginner", duration:"7:41", topic:"Stance", desc:"Step-by-step body alignment for balance and consistency at the table."},
+    {id:3, ytId:"OXDnmOOC1dg", title:"Stance, Step by Step (Like a Pro)", level:"Beginner", duration:"8:55", topic:"Stance", desc:"Build a rock-solid foundation: foot placement, distance, and head position."},
+    {id:4, ytId:"YIsEqTna2Ao", title:"10 Years of Pool Knowledge", level:"Beginner", duration:"18:32", topic:"Overview", desc:"A complete beginner primer condensing a decade of lessons into one watch."},
+    {id:5, ytId:"IvEYuRUpI8A", title:"Refine Your Stance & Stroke", level:"Intermediate", duration:"10:18", topic:"Mechanics", desc:"Diagnose and smooth out your stroke once the basics feel natural."},
+    {id:6, ytId:"DpO3CCIibZQ", title:"When to Use Spin and Draw", level:"Intermediate", duration:"9:47", topic:"English", desc:"Read the table and choose follow, draw, or side spin for shape on the next ball."},
+    {id:7, ytId:"Dn1QzfOvk8I", title:"Power Draw Shot — Full Guide", level:"Advanced", duration:"11:20", topic:"Cue Ball Control", desc:"Generate serious draw on demand without miscuing — mechanics and drills."},
+    {id:8, ytId:"f1vn9kbHXDo", title:"The Most Important Shot in Pool", level:"Advanced", duration:"16:08", topic:"Strategy", desc:"Pattern play and the single decision that decides most run-outs."}
 ];
+const LESSON_LEVELS = { Beginner:{c:'#27ae60'}, Intermediate:{c:'#f0c040'}, Advanced:{c:'#b06bff'} };
 function filterLessons(level,el){ document.querySelectorAll('#screen-academy .pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); renderLessons(level); }
 function renderLessons(level){
-    if(!level) level="Beginner";
+    if(!level) level="All";
     const list=document.getElementById('lesson-list'); if(!list) return;
-    const f=LESSON_DATA.filter(l=>l.level===level);
-    list.innerHTML=f.map(l=>'<div class="card clickable" onclick="loadVideo('+l.id+')" style="display:flex;align-items:center;gap:15px;padding:12px;">'
-        +'<div style="width:35px;height:35px;background:var(--deep);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--gold);flex-shrink:0;">&#9654;</div>'
-        +'<div><div style="color:var(--ivory);font-family:\'Playfair Display\';font-size:14px;">'+l.title+'</div><div style="color:var(--dim);font-family:\'DM Mono\';font-size:10px;">'+l.duration+'</div></div>'
-        +'<div id="check-'+l.id+'" style="margin-left:auto;color:var(--gold);opacity:0.15;">&#10003;</div></div>').join('');
+    const f = level==="All" ? LESSON_DATA : LESSON_DATA.filter(l=>l.level===level);
+    const intro = '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:4px;">'+f.length+' curated lessons · beginner → pro</div>';
+    list.innerHTML = intro + f.map(l=>{
+        const lc=(LESSON_LEVELS[l.level]||{}).c||'var(--gold)';
+        return '<div class="card clickable" onclick="loadVideo('+l.id+')" style="display:flex;align-items:center;gap:13px;padding:12px;">'
+        +'<div style="width:38px;height:38px;background:var(--deep);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid var(--gold);flex-shrink:0;">&#9654;</div>'
+        +'<div style="flex:1;min-width:0;">'
+        +'<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:3px;"><span style="color:var(--ivory);font-family:\'Playfair Display\';font-size:14px;">'+l.title+'</span>'
+        +'<span style="font-family:\'DM Mono\';font-size:8px;letter-spacing:1px;text-transform:uppercase;color:'+lc+';border:1px solid '+lc+';border-radius:4px;padding:1px 5px;">'+l.level+'</span></div>'
+        +'<div style="color:var(--dim);font-family:\'Libre Baskerville\',serif;font-size:11px;line-height:1.4;margin-bottom:3px;">'+l.desc+'</div>'
+        +'<div style="color:var(--gold2);font-family:\'DM Mono\';font-size:9px;">'+l.topic+' · '+l.duration+'</div>'
+        +'</div>'
+        +'<div id="check-'+l.id+'" style="color:var(--gold);opacity:0.15;flex-shrink:0;">&#10003;</div></div>';
+    }).join('');
 }
 function loadVideo(id){
     const l=LESSON_DATA.find(x=>x.id===id);
