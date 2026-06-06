@@ -676,6 +676,16 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
       <div class="glass-overlay">
         <div class="page-header"><div class="eyebrow">AI Shot Lab</div><h2>Shot Analyzer</h2></div>
         <div class="content" style="padding:14px;">
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <div class="pill active" id="amode-single" onclick="setAnalyzerMode('single')">Single Shot</div>
+            <div class="pill" id="amode-best" onclick="setAnalyzerMode('best')">&#10024; Best Shot</div>
+          </div>
+          <div id="best-toolbar" style="display:none;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+            <div class="pill active" id="btool-cue" onclick="setBestTool('cue')">&#9898; Cue</div>
+            <div class="pill" id="btool-ball" onclick="setBestTool('ball')">&#128956; Balls</div>
+            <div class="pill" id="btool-pocket" onclick="setBestTool('pocket')">&#9971; Pockets</div>
+            <button class="btn btn-gold" onclick="findBestShot()" style="padding:8px 16px;margin-left:auto;font-size:12px;">&#10024; Find Best</button>
+          </div>
           <div id="analyzer-viewport" style="aspect-ratio:4/3;max-height:52vh;">
             <video id="analyzer-video" autoplay playsinline muted></video>
             <canvas id="analyzer-canvas"></canvas>
@@ -688,6 +698,7 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
             <button class="btn btn-felt" onclick="switchAnalyzerCamera()" style="padding:10px 22px;">&#128247; Flip</button>
             <button class="btn btn-gold" id="btn-ai-analysis" onclick="requestAIAnalysis()" style="padding:10px 22px;opacity:0.55;">&#129504; AI Setup Needed</button>
           </div>
+          <div id="best-result" style="display:none;" class="card"></div>
           <div id="analyzer-info" style="display:none;" class="card">
             <div class="eyebrow" style="margin-bottom:10px;">Shot Geometry</div>
             <div id="analyzer-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"></div>
@@ -2694,6 +2705,8 @@ function _gDraw() {
 // SHOT ANALYZER — Geometry Engine
 // ════════════════════════════════════════════════════════
 var _aStream = null, _aFacing = 'environment', _aStep = 0, _aPts = [], _aRaf = null, _aLastResult = null, _aListened = false;
+// Best-Shot advisor state
+var _aMode = 'single', _bCue = null, _bBalls = [], _bPockets = [], _bTool = 'cue', _bBest = null;
 
 const _ASTEPS = [
     'Step 1 — Tap your cue ball (white)',
@@ -2739,15 +2752,42 @@ function _resizeACanvas() {
 }
 
 function _onATap(e) {
-    if (_aStep >= 3) return;
     var cv = document.getElementById('analyzer-canvas');
     var rect = e._rect || cv.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    // Store as normalized ratios so markers stay correct after rotate/resize
-    _aPts[_aStep] = { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height };
+    var pt = { x: (e.clientX - rect.left) / rect.width, y: (e.clientY - rect.top) / rect.height };
+    if (_aMode === 'best') { _onBestTap(pt); return; }
+    if (_aStep >= 3) return;
+    _aPts[_aStep] = pt;
     _aStep++;
     _setAStep(_aStep);
     if (_aStep >= 3) _showAResult();
+}
+
+function _onBestTap(pt) {
+    if (_bTool === 'cue') { _bCue = pt; _bTool = 'ball'; _syncBestTool(); }
+    else if (_bTool === 'ball') { if (_bBalls.length < 7) _bBalls.push(pt); }
+    else if (_bTool === 'pocket') { if (_bPockets.length < 6) _bPockets.push(pt); }
+    _setBestInstr();
+}
+function setAnalyzerMode(m) {
+    _aMode = m;
+    document.getElementById('amode-single').classList.toggle('active', m==='single');
+    document.getElementById('amode-best').classList.toggle('active', m==='best');
+    document.getElementById('best-toolbar').style.display = m==='best' ? 'flex' : 'none';
+    resetAnalyzer();
+}
+function setBestTool(t) { _bTool = t; _syncBestTool(); _setBestInstr(); }
+function _syncBestTool() { ['cue','ball','pocket'].forEach(function(t){ var el=document.getElementById('btool-'+t); if(el) el.classList.toggle('active', t===_bTool); }); }
+function _setBestInstr() {
+    var instr = document.getElementById('analyzer-instructions');
+    var badge = document.getElementById('analyzer-step-badge');
+    if (badge) badge.textContent = 'Best Shot · '+_bBalls.length+' balls · '+_bPockets.length+' pockets';
+    if (!instr) return;
+    if (!_bCue) instr.textContent = 'Tap your cue ball to begin.';
+    else if (_bTool==='ball') instr.textContent = 'Tap each remaining object ball, then switch to Pockets.';
+    else if (_bTool==='pocket') instr.textContent = 'Tap the pockets you can use, then ✨ Find Best.';
+    else instr.textContent = 'Mark balls and pockets, then ✨ Find Best.';
 }
 
 function _aPx(pt) {
@@ -2778,11 +2818,53 @@ function _drawAFrame() {
     var ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
     ctx.clearRect(0, 0, W, H);
     var R = Math.max(14, W * 0.03);
+    if (_aMode === 'best') { _drawBestFrame(ctx, R, W, H); return; }
     var p0 = _aPts[0] && _aPx(_aPts[0]), p1 = _aPts[1] && _aPx(_aPts[1]), p2 = _aPts[2] && _aPx(_aPts[2]);
     if (p0) _drawBall(ctx, p0, '#ffffff', R);
     if (p1) _drawBall(ctx, p1, '#d4a017', R);
     if (p2) _drawPocket(ctx, p2);
     if (p0 && p1 && p2) _drawPaths(ctx, p0, p1, p2, R, W, H);
+}
+function _drawBestFrame(ctx, R, W, H) {
+    if (_bCue) _drawBall(ctx, _aPx(_bCue), '#ffffff', R);
+    _bBalls.forEach(function(b){ _drawBall(ctx, _aPx(b), '#d4a017', R); });
+    _bPockets.forEach(function(p){ _drawPocket(ctx, _aPx(p)); });
+    if (_bBest) _drawPaths(ctx, _aPx(_bCue), _aPx(_bBest.ball), _aPx(_bBest.pocket), R, W, H);
+}
+// Difficulty of a cue→ball→pocket shot in pixel space (mirrors the single-shot model).
+function _shotDifficulty(cue, ball, pocket, maxD) {
+    var a1 = Math.atan2(ball.y-cue.y, ball.x-cue.x);
+    var a2 = Math.atan2(pocket.y-ball.y, pocket.x-ball.x);
+    var cut = Math.abs((a2-a1)*180/Math.PI); if (cut>180) cut=360-cut; cut=Math.min(cut,90);
+    var d1 = Math.hypot(ball.x-cue.x, ball.y-cue.y);
+    var diff = Math.min(10, (cut/9 + Math.min(d1/maxD*8,5))/2);
+    return { cut:cut, d1:d1, diff:diff };
+}
+function findBestShot() {
+    if (!_bCue || !_bBalls.length || !_bPockets.length) { showToast('Mark the cue ball, at least one object ball, and one pocket.','gold'); return; }
+    var cv = document.getElementById('analyzer-canvas'); var maxD = Math.max(cv?cv.width:600, 1);
+    var cue = _aPx(_bCue), combos = [];
+    _bBalls.forEach(function(b, bi){ var bp=_aPx(b);
+        _bPockets.forEach(function(p, pi){ var pp=_aPx(p);
+            var s = _shotDifficulty(cue, bp, pp, maxD);
+            if (s.cut < 80) combos.push({ ball:b, pocket:p, ballIdx:bi+1, pocketIdx:pi+1, cut:s.cut, diff:s.diff }); // makeable cut only
+        });
+    });
+    if (!combos.length) { showToast('No makeable shot found — those cuts are too thin. Re-mark positions.','gold'); return; }
+    combos.sort(function(a,b){ return a.diff-b.diff; });
+    _bBest = combos[0];
+    var label = function(d){ return d<3?'Easy':d<6?'Moderate':d<8?'Hard':'Expert'; };
+    var color = function(d){ return d<3?'var(--green2)':d<6?'var(--gold)':d<8?'var(--trim)':'var(--red2)'; };
+    var box = document.getElementById('best-result');
+    var top = combos.slice(0,3);
+    box.innerHTML = '<div class="eyebrow" style="margin-bottom:8px;">&#10024; Recommended Shot</div>'
+        + '<div style="font-family:\'Playfair Display\';color:var(--ivory);font-size:16px;margin-bottom:6px;">Play Ball '+_bBest.ballIdx+' &rarr; Pocket '+_bBest.pocketIdx+'</div>'
+        + '<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:'+color(_bBest.diff)+';margin-bottom:12px;">'+Math.round(_bBest.cut)+'&deg; cut · '+label(_bBest.diff)+' ('+_bBest.diff.toFixed(1)+'/10)</div>'
+        + '<div class="eyebrow" style="margin-bottom:6px;">Ranked options</div>'
+        + top.map(function(c,i){ return '<div style="display:flex;justify-content:space-between;font-family:\'DM Mono\',monospace;font-size:11px;padding:5px 0;border-bottom:1px solid rgba(30,92,42,0.25);"><span style="color:var(--ivory);">'+(i+1)+'. Ball '+c.ballIdx+' &rarr; Pocket '+c.pocketIdx+'</span><span style="color:'+color(c.diff)+';">'+Math.round(c.cut)+'&deg; · '+label(c.diff)+'</span></div>'; }).join('');
+    box.style.display = 'block';
+    _aLastResult = { cut: Math.round(_bBest.cut), difficulty: _bBest.diff.toFixed(1), shotType:'Best Shot', diffLabel: label(_bBest.diff) };
+    _syncAIBtn(AI_PROXY_URL ? '1' : '0.55');
 }
 
 function _drawBall(ctx, p, color, R) {
@@ -2907,10 +2989,13 @@ function _syncAIBtn(opacity) {
 
 function resetAnalyzer() {
     _aStep=0; _aPts=[]; _aLastResult=null;
-    _setAStep(0);
+    _bCue=null; _bBalls=[]; _bPockets=[]; _bBest=null; _bTool='cue';
     var info=document.getElementById('analyzer-info'), diff=document.getElementById('analyzer-difficulty');
+    var best=document.getElementById('best-result');
     if (info) info.style.display='none';
     if (diff) diff.style.display='none';
+    if (best) best.style.display='none';
+    if (_aMode==='best') { _syncBestTool(); _setBestInstr(); } else { _setAStep(0); }
     _syncAIBtn('0.4');
     _aiReset();
 }
