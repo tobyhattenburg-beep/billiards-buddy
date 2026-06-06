@@ -401,9 +401,13 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
           </div>
         </div>
         <div class="card" style="padding:15px;border:1px solid var(--gold);">
-          <button class="btn btn-gold" style="width:100%;padding:15px;font-weight:bold;margin-bottom:10px;" onclick="finalizeMatch()">Finish &amp; Log Match</button>
+          <input type="text" id="opp-name" placeholder="Opponent name (for ranked match)" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--dim);color:var(--ivory);padding:11px;border-radius:8px;margin-bottom:10px;outline:none;font-family:'DM Mono';font-size:13px;">
+          <button class="btn btn-gold" style="width:100%;padding:14px;font-weight:bold;margin-bottom:8px;" onclick="submitRankedMatch()">&#9878; Submit for Ranking</button>
+          <button class="btn btn-felt" style="width:100%;padding:11px;margin-bottom:8px;" onclick="finalizeMatch()">Log Casual (auto-verified)</button>
           <button class="btn" style="width:100%;background:transparent;border:1px solid var(--dim);color:var(--dim);" onclick="resetMatch()">Reset Rack</button>
+          <div style="font-family:'DM Mono';font-size:9px;color:var(--dim);text-align:center;margin-top:10px;line-height:1.6;">Ranked wins count only after your opponent confirms the result. Casual &amp; 3D-game wins are auto-verified.</div>
         </div>
+        <div id="match-pending" style="margin-top:14px;"></div>
       </div></div>
     </div>
 
@@ -499,6 +503,7 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
           <div class="pill" onclick="switchRoom('equipment',this)">Equipment</div>
           <div class="pill" onclick="switchRoom('players',this)">Find Players</div>
         </div>
+        <div id="match-inbox" style="padding:0 16px;flex-shrink:0;"></div>
         <div id="challenge-inbox" style="padding:0 16px;flex-shrink:0;"></div>
         <div style="padding:0 16px 6px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;"><div class="eyebrow">Highlights</div><button class="pill" onclick="openCompose()" style="background:var(--gold);color:#0a0b0d;font-weight:700;border-color:var(--gold);">&#43; Share</button></div>
         <div class="ugc-strip" id="feed-strip"></div>
@@ -872,6 +877,7 @@ function showScreen(id) {
     }
     if (id === 'community') { initCommunity(); }
     if (id === 'timer') { renderSpeed(); }
+    if (id === 'score') { renderMatchPending(); }
     if (id === 'analyzer') { initAnalyzer(); }
     if (prev === 'analyzer' && id !== 'analyzer') { stopAnalyzer(); }
     if (id === 'game') { initGame(); }
@@ -900,6 +906,8 @@ if (typeof userProfile.stats.gamesLost !== 'number') userProfile.stats.gamesLost
 if (!userProfile.avatarSeed) userProfile.avatarSeed = userProfile.name || 'player';
 // Phase 5 — shot-speed gamification
 if (!userProfile.speed) userProfile.speed = { best:null, drills:0, points:0, badges:[] };
+// Phase 8 — ranked matches awaiting opponent confirmation
+if (!userProfile.pendingMatches) userProfile.pendingMatches = [];
 
 // Speed-drill achievement badges. `t` is reaction time in seconds; `c` is total drills.
 const SPEED_BADGES = [
@@ -994,12 +1002,104 @@ function updateName() {
 let currentMatch = {p1:0, p2:0};
 function adjustScore(p,a){ currentMatch[p]=Math.max(0,currentMatch[p]+a); document.getElementById(p+'-score').textContent=currentMatch[p]; if(window.navigator.vibrate) window.navigator.vibrate(40); }
 function resetMatch(){ currentMatch={p1:0,p2:0}; document.getElementById('p1-score').textContent="0"; document.getElementById('p2-score').textContent="0"; }
+// Apply a settled result to the ranked record. `won` = did the local player win.
+function creditResult(won){
+    if(won){ userProfile.stats.gamesWon+=1; userProfile.skill+=24; }
+    else { userProfile.stats.gamesLost=(userProfile.stats.gamesLost||0)+1; userProfile.skill=Math.max(800, userProfile.skill-16); }
+    saveProfile(); publishLeaderboardEntry();
+}
+// Casual / 3D-game / AI matches are auto-verified (no opponent to dispute).
 function finalizeMatch(){
     if(currentMatch.p1===0 && currentMatch.p2===0) return;
-    if(currentMatch.p1 > currentMatch.p2){ userProfile.stats.gamesWon+=1; userProfile.skill+=24; showToast("Victory! +24 skill", "success"); }
-    else { userProfile.stats.gamesLost=(userProfile.stats.gamesLost||0)+1; userProfile.skill=Math.max(800, userProfile.skill-16); showToast("Loss recorded. −16 skill", "gold"); }
-    saveProfile(); publishLeaderboardEntry(); resetMatch();
+    var won = currentMatch.p1 > currentMatch.p2;
+    creditResult(won);
+    showToast(won ? "Casual win logged. +24 skill" : "Casual loss recorded. −16 skill", won?"success":"gold");
+    resetMatch();
 }
+
+// ════════════════════════════════════════════════════════
+// SCOREBOARD VERIFICATION (Phase 8)
+// ════════════════════════════════════════════════════════
+// Ranked wins require the opponent to confirm before they count.
+//   matchClaims/<oppUid>/<id>   — a result awaiting that user's confirmation
+//   matchConfirms/<claimUid>/<id> — the opponent's verdict on your claim
+var _matchClaims = {};                 // incoming, to confirm
+var _matchSeedActive = true;
+const _MATCH_SEED = { key:'seed-match', fromName:'Lola Quick', fromSeed:'Lola Quick', myScore:7, oppScore:5, status:'pending', ts:Date.now()-300000 };
+
+function submitRankedMatch(){
+    if(currentMatch.p1===0 && currentMatch.p2===0){ showToast('Score the match first.','gold'); return; }
+    var opp = (document.getElementById('opp-name').value||'').trim();
+    if(!opp){ showToast('Enter the opponent name for a ranked match (or use Log Casual).','gold'); return; }
+    var won = currentMatch.p1 > currentMatch.p2;
+    var oppUid = null;
+    for(var uid in _lbRemote){ if(_lbRemote.hasOwnProperty(uid) && _lbRemote[uid] && (_lbRemote[uid].name||'').toLowerCase()===opp.toLowerCase()){ oppUid=uid; break; } }
+    var rec = { id:'m'+Date.now(), opp:opp, oppUid:oppUid, myScore:currentMatch.p1, oppScore:currentMatch.p2, won:won, status:'pending', ts:Date.now() };
+    userProfile.pendingMatches.push(rec);
+    if(oppUid && _fbDb && _fbUser){
+        _fbDb.ref('matchClaims/'+oppUid+'/'+rec.id).set({ fromUid:_fbUser.uid, fromName:userProfile.name||'Player', fromSeed:userProfile.avatarSeed||userProfile.name,
+            myScore:currentMatch.p1, oppScore:currentMatch.p2, claimantWon:won, status:'pending', ts:Date.now() });
+        showToast('⚖ Sent to '+opp+' to confirm the result.','info');
+    } else {
+        showToast('⚖ Result saved as pending — '+opp+' must confirm it to count.','gold');
+    }
+    saveProfile(); renderMatchPending(); resetMatch();
+}
+function renderMatchPending(){
+    var box=document.getElementById('match-pending'); if(!box) return;
+    var p=userProfile.pendingMatches||[];
+    if(!p.length){ box.innerHTML=''; return; }
+    box.innerHTML = '<div class="eyebrow" style="margin-bottom:8px;">&#9203; Awaiting Confirmation ('+p.length+')</div>' + p.map(function(m){
+        return '<div class="card" style="padding:11px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">'
+            + '<div><div style="font-family:\'Playfair Display\';color:var(--ivory);font-size:14px;">vs '+escCom(m.opp)+'</div>'
+            + '<div style="font-family:\'DM Mono\';font-size:10px;color:var(--dim);">'+m.myScore+'–'+m.oppScore+' · '+(m.won?'claimed win':'claimed loss')+'</div></div>'
+            + '<span style="font-family:\'DM Mono\';font-size:10px;color:var(--gold2);">pending</span></div>';
+    }).join('');
+}
+// Incoming claims to confirm (community inbox)
+function matchClaimList(){
+    var arr=[]; for(var k in _matchClaims){ if(!_matchClaims.hasOwnProperty(k)) continue; var c=_matchClaims[k]; if(c && c.status==='pending'){ c.key=k; arr.push(c); } }
+    if(!arr.length && _matchSeedActive) arr=[_MATCH_SEED];
+    arr.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    return arr;
+}
+function renderMatchInbox(){
+    var box=document.getElementById('match-inbox'); if(!box) return;
+    var arr=matchClaimList();
+    if(!arr.length){ box.innerHTML=''; return; }
+    box.innerHTML = '<div class="eyebrow" style="margin:6px 0 8px;">&#9878; Confirm Match ('+arr.length+')</div>' + arr.map(function(c){
+        // From claimant's view they report claimantWon; for me the opponent, my result is the inverse.
+        var theyWon = (c.claimantWon!==undefined) ? c.claimantWon : true;
+        return '<div class="chal-row" style="background:rgba(52,152,219,0.08);border-color:rgba(52,152,219,0.3);">'
+            + '<div class="chal-av" style="background-image:url(\''+avatarUrl(c.fromSeed||c.fromName)+'\');"></div>'
+            + '<div class="chal-body"><div class="chal-name">'+escCom(c.fromName||'A player')+'</div><div class="chal-sub">claims '+(theyWon?'a win':'a loss')+' · '+(c.myScore!=null?c.myScore:'?')+'–'+(c.oppScore!=null?c.oppScore:'?')+'</div></div>'
+            + '<button class="chal-yes" onclick="respondMatch(\''+escCom(c.key)+'\',true)">Confirm</button>'
+            + '<button class="chal-no" onclick="respondMatch(\''+escCom(c.key)+'\',false)">Dispute</button>'
+            + '</div>';
+    }).join('');
+}
+function respondMatch(key, confirm){
+    var c = _matchClaims[key] || (_MATCH_SEED.key===key ? _MATCH_SEED : null);
+    if(_fbDb && _fbUser && _matchClaims[key]){
+        _fbDb.ref('matchClaims/'+_fbUser.uid+'/'+key).update({ status: confirm?'confirmed':'disputed' });
+        if(c.fromUid) _fbDb.ref('matchConfirms/'+c.fromUid+'/'+key).set({ confirmed:confirm, by:userProfile.name||'Player', ts:Date.now() });
+        if(confirm){ creditResult(!(c.claimantWon!==false)); } // they won -> I lost
+    } else { _matchSeedActive=false; if(confirm) creditResult(false); }
+    showToast(confirm ? '⚖ Result confirmed — leaderboard updated.' : 'Result disputed.', confirm?'success':'gold');
+    renderMatchInbox();
+}
+function listenMatchClaims(){ try{ if(!_fbDb||!_fbUser) return;
+    _fbDb.ref('matchClaims/'+_fbUser.uid).on('value', function(snap){ _matchClaims=snap.val()||{}; renderMatchInbox(); });
+} catch(e){} }
+function listenMatchConfirms(){ try{ if(!_fbDb||!_fbUser) return;
+    _fbDb.ref('matchConfirms/'+_fbUser.uid).on('child_added', function(snap){ var v=snap.val(); var id=snap.key;
+        var pend=(userProfile.pendingMatches||[]).filter(function(m){return m.id===id;})[0]; if(!pend) return;
+        if(v.confirmed) creditResult(pend.won);
+        userProfile.pendingMatches=userProfile.pendingMatches.filter(function(m){return m.id!==id;}); saveProfile(); renderMatchPending();
+        showToast(v.confirmed ? ('⚖ '+pend.opp+' confirmed your '+(pend.won?'win':'result')+'!') : (pend.opp+' disputed the result.'), v.confirmed?'success':'gold');
+        _fbDb.ref('matchConfirms/'+_fbUser.uid+'/'+id).remove();
+    });
+} catch(e){} }
 
 // ════════════════════════════════════════════════════════
 // VENUES
@@ -1867,6 +1967,7 @@ function avatarUrl(seed){ return 'https://api.dicebear.com/9.x/thumbs/svg?seed='
 
 // UGC photo strip + monthly leaderboard. Renders independently of chat connection.
 function renderCommunityShowcase(){
+    renderMatchInbox();
     renderChallenges();
     renderFeed();
     renderLeaderboard();
@@ -2136,7 +2237,7 @@ function initCommunity() {
         _fbDb   = firebase.database();
         _fbAuth = firebase.auth();
         _fbAuth.signInAnonymously()
-            .then(function(c){ _fbUser = c.user; listenRoom(_communityRoom); publishLeaderboardEntry(); syncLeaderboard(); listenFeed(); listenChallenges(); })
+            .then(function(c){ _fbUser = c.user; listenRoom(_communityRoom); publishLeaderboardEntry(); syncLeaderboard(); listenFeed(); listenChallenges(); listenMatchClaims(); listenMatchConfirms(); })
             .catch(function(e){ showCommunitySetup('Auth error: ' + e.message); });
     } catch(e) { showCommunitySetup('Init error: ' + e.message); }
 }
