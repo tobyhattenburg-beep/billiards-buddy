@@ -313,17 +313,36 @@ function gameOver(){ G.state='over'; var win=G.scores.you>=G.scores.ai; say(win?
   var xp= win?(60+Math.round(G.ai.difficulty*40)):20; addXp(xp);
   if(G.careerMode){
     var cash=80+Math.round(G.ai.difficulty*220);
+    var firstWin = win && !PLAYER.career.beaten[G.ai.id];
     if(win){ PLAYER.career.beaten[G.ai.id]=true; PLAYER.career.cash+=cash;
       var st=CAREER[G.careerStage], done=st&&st.opponents.every(function(o){return PLAYER.career.beaten[o];});
       if(done&&!PLAYER.career.done[st.venue]){ PLAYER.career.done[st.venue]=true; PLAYER.career.cash+=st.reward;
         var nxt=CAREER[G.careerStage+1]; venueToast(st, nxt?VENUES[nxt.venue].name:null); }
-      savePlayer(); updateCash(); }
+      savePlayer(); updateCash();
+      if(firstWin) creditMainProfile(Math.round(12 + G.ai.difficulty*24), G.ai.name); }
     showMsg(win?'Match Won! 🏆':G.ai.name+' Wins',
       'You '+G.scores.you+' · '+G.ai.name+' '+G.scores.ai+(win?('   +$'+cash+' · +'+xp+' XP'):('   +'+xp+' XP')),
       win?'Career Map':'Rematch', win?openCareer:newGame);
   } else {
     showMsg(win?'You Win! 🏆':G.ai.name+' Wins','You '+G.scores.you+' · '+G.ai.name+' '+G.scores.ai+'   +'+xp+' XP','Play Again',newGame);
   }
+}
+
+// Auto-verified ranked credit: a first-time career win syncs into the main
+// Billiards Buddy profile (same-origin localStorage). Engine owns the result,
+// so no opponent confirmation is needed (Phase 8 auto-verify rule). First win
+// per opponent only — replays don't re-credit, so ranked skill isn't farmable.
+function creditMainProfile(gain, oppName){
+  try{
+    var p = JSON.parse(localStorage.getItem('bb_profile') || 'null');
+    if(!p) p = { name:'Hustler Pro', skill:1000, stats:{ gamesWon:0, gamesLost:0 } };
+    if(!p.stats) p.stats = {};
+    if(typeof p.skill !== 'number') p.skill = 1000;
+    p.stats.gamesWon = (p.stats.gamesWon||0) + 1;
+    p.skill = p.skill + gain;
+    localStorage.setItem('bb_profile', JSON.stringify(p));
+    if(typeof buyFx === 'function') buyFx('🏅 +'+gain+' ranked skill<small>'+(oppName?('Beat '+oppName+' — '):'')+'synced to your profile</small>');
+  }catch(e){}
 }
 
 // ---- AI ----
