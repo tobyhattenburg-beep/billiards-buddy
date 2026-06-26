@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MatchManager — unit test</title>
+<style>body{font:14px ui-monospace,monospace;background:#0a0f18;color:#9ef6ff;padding:16px}
+.fail{color:#ff6b6b}.ok{color:#5dff9e}h1{font-size:16px}</style>
+</head>
+<body>
+<h1 id="hdr">running…</h1>
+<pre id="out"></pre>
+<script type="module">
+import { MatchManager } from '../src/game/MatchManager.js';
+
+const log = [];
+let pass = 0, fail = 0;
+function ok(name, cond, detail) {
+  if (cond) { pass++; log.push('  PASS  ' + name + (detail ? '  -- ' + detail : '')); }
+  else { fail++; log.push('  FAIL  ' + name + (detail ? '  -- ' + detail : '')); }
+}
+
+try {
+  // 1. clean pot keeps the table and scores
+  let m = new MatchManager();
+  let r = m.resolveShot({ potted: 2, scratch: false, remaining: 10 });
+  ok('clean pot scores', m.scores.you === 2 && r.scored && r.potted === 2);
+  ok('clean pot continues', r.continue === true && r.turn === 'you');
+
+  // 2. dry shot passes the turn
+  r = m.resolveShot({ potted: 0, scratch: false, remaining: 10 });
+  ok('dry shot passes turn', r.continue === false && r.turn === 'ai' && m.turn === 'ai');
+
+  // 3. scratch never continues, even with a pot
+  let m3 = new MatchManager();
+  r = m3.resolveShot({ potted: 1, scratch: true, remaining: 8 });
+  ok('scratch scores the ball', m3.scores.you === 1, 'you=' + m3.scores.you);
+  ok('scratch passes turn despite pot', r.continue === false && m3.turn === 'ai');
+
+  // 4. turn alternation across several misses
+  let m4 = new MatchManager();
+  m4.resolveShot({ potted: 0, remaining: 5 }); // you -> ai
+  m4.resolveShot({ potted: 0, remaining: 5 }); // ai -> you
+  ok('alternation returns to opener', m4.turn === 'you');
+
+  // 5. game over when table clears; higher score wins
+  let m5 = new MatchManager();
+  m5.scores.you = 3; m5.scores.ai = 5; m5.turn = 'ai';
+  let go = m5.resolveShot({ potted: 1, scratch: false, remaining: 0 });
+  ok('clears -> over', go.over === true && m5.over === true);
+  ok('higher score wins', go.winner === 'ai' && m5.scores.ai === 6, 'winner=' + go.winner);
+
+  // 6. tie goes to the opener (players[0])
+  let m6 = new MatchManager();
+  m6.scores.you = 4; m6.scores.ai = 3; m6.turn = 'ai';
+  go = m6.resolveShot({ potted: 1, scratch: false, remaining: 0 }); // ai -> 4, tie 4-4
+  ok('tie goes to opener', go.winner === 'you' && m6.scores.ai === 4, 'you4 ai' + m6.scores.ai + ' winner ' + go.winner);
+
+  // 7. resolving after game-over is inert
+  let after = m6.resolveShot({ potted: 5, remaining: 0 });
+  ok('post-over shot is inert', m6.scores.ai === 4 && after.over === true);
+
+  // 8. callbacks fire
+  let events = [];
+  let m8 = new MatchManager({
+    onTurn: (t) => events.push('turn:' + t),
+    onScore: (p, total, d) => events.push('score:' + p + '=' + total + '(+' + d + ')'),
+    onGameOver: (w) => events.push('over:' + w),
+  });
+  m8.resolveShot({ potted: 2, remaining: 3 });   // score, continue (no turn cb)
+  m8.resolveShot({ potted: 0, remaining: 3 });   // miss -> turn cb
+  m8.resolveShot({ potted: 3, remaining: 0 });   // ai scores + game over
+  ok('onScore + onTurn + onGameOver fired',
+     events.includes('score:you=2(+2)') && events.includes('turn:ai') && events.some(e => e.startsWith('over:')),
+     events.join(' , '));
+
+  // 9. reset restores opener + zero scores
+  m8.reset();
+  ok('reset', m8.scores.you === 0 && m8.scores.ai === 0 && m8.turn === 'you' && !m8.over);
+} catch (err) {
+  fail++; log.push('  THREW  ' + (err && err.stack || err));
+}
+
+const allPass = fail === 0;
+document.getElementById('out').textContent = log.join('\n');
+const hdr = document.getElementById('hdr');
+hdr.textContent = (allPass ? 'ALL PASS' : fail + ' FAILED') + ' -- MatchManager (' + pass + '/' + (pass + fail) + ')';
+hdr.className = allPass ? 'ok' : 'fail';
+window.__RESULT__ = { pass, fail, allPass };
+</script>
+</body>
+</html>
