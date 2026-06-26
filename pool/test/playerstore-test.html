@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PlayerStore — unit test</title>
+<style>body{font:14px ui-monospace,monospace;background:#0a0f18;color:#9ef6ff;padding:16px}
+.fail{color:#ff6b6b}.ok{color:#5dff9e}h1{font-size:16px}</style>
+</head>
+<body>
+<h1 id="hdr">running…</h1>
+<pre id="out"></pre>
+<script type="module">
+import { PlayerStore, SAVE_KEY, PROFILE_KEY } from '../src/game/PlayerStore.js';
+
+// in-memory fake of the Web Storage API
+function fakeStorage(seed = {}) {
+  const m = new Map(Object.entries(seed));
+  return {
+    getItem: (k) => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: (k) => m.delete(k),
+    _dump: () => Object.fromEntries(m),
+  };
+}
+
+const log = [];
+let pass = 0, fail = 0;
+function ok(name, cond, detail) {
+  if (cond) { pass++; log.push('  PASS  ' + name + (detail ? '  — ' + detail : '')); }
+  else { fail++; log.push('  FAIL  ' + name + (detail ? '  — ' + detail : '')); }
+}
+
+try {
+  // 1. fresh save defaults
+  let s = fakeStorage();
+  let ps = new PlayerStore({ storage: s });
+  ok('fresh save: defaults', ps.player.cue === 'ash' && ps.player.ball === 'classic'
+     && ps.player.career.cash === 0 && ps.player.unlocked[0] === 'ash',
+     JSON.stringify({ cue: ps.player.cue, ball: ps.player.ball }));
+
+  // 2. round-trips through storage
+  ps.player.career.cash = 1234; ps.save();
+  ok('save persists', JSON.parse(s.getItem(SAVE_KEY)).career.cash === 1234);
+  let ps2 = new PlayerStore({ storage: s });
+  ok('load round-trips', ps2.player.career.cash === 1234);
+
+  // 3. backfill of legacy save missing new fields
+  let legacy = fakeStorage({ [SAVE_KEY]: JSON.stringify({ xp: 50, level: 2, cue: 'viper', unlocked: ['ash', 'viper'] }) });
+  let psL = new PlayerStore({ storage: legacy });
+  ok('legacy backfill', psL.player.ball === 'classic' && !!psL.player.career
+     && Array.isArray(psL.player.ownedBalls), JSON.stringify(psL.player.career));
+
+  // 4. level curve (pure)
+  ok('levelInfo L1', PlayerStore.levelInfo(0).level === 1);
+  ok('levelInfo L2 boundary', PlayerStore.levelInfo(100).level === 2);
+  ok('levelInfo accumulates', PlayerStore.levelInfo(260).level === 3, 'xp260 -> ' + PlayerStore.levelInfo(260).level);
+
+  // 5. creditMainProfile creates a profile when none exists
+  let s5 = fakeStorage();
+  let ps5 = new PlayerStore({ storage: s5 });
+  let p = ps5.creditMainProfile(30, 'Champ Carter');
+  ok('credit creates bb_profile', p && p.stats.gamesWon === 1 && p.skill === 1030, JSON.stringify(p && p.stats));
+
+  // 6. creditMainProfile increments an existing profile
+  let s6 = fakeStorage({ [PROFILE_KEY]: JSON.stringify({ name: 'Toby', skill: 1500, stats: { gamesWon: 4, gamesLost: 2 } }) });
+  let fx = [];
+  let ps6 = new PlayerStore({ storage: s6, onFx: (a, b) => fx.push(a + '|' + b) });
+  ps6.creditMainProfile(24, 'The Ghost');
+  let after = JSON.parse(s6.getItem(PROFILE_KEY));
+  ok('credit increments existing', after.skill === 1524 && after.stats.gamesWon === 5, 'skill ' + after.skill);
+  ok('onFx fires', fx.length === 1 && fx[0].includes('+24'), fx[0]);
+
+  // 7. recordCareerWin: first win credits, replay does NOT (not farmable)
+  let s7 = fakeStorage();
+  let ps7 = new PlayerStore({ storage: s7 });
+  let r1 = ps7.recordCareerWin('shark', 'Sharkey Malone', 0.62);
+  let r2 = ps7.recordCareerWin('shark', 'Sharkey Malone', 0.62);
+  ok('first career win credits', r1.firstWin && r1.credited === Math.round(12 + 0.62 * 24), 'credited ' + r1.credited);
+  ok('replay does NOT re-credit', !r2.firstWin && r2.credited === 0);
+  let prof7 = JSON.parse(s7.getItem(PROFILE_KEY));
+  ok('only one ranked win banked', prof7.stats.gamesWon === 1, 'gamesWon ' + prof7.stats.gamesWon);
+} catch (err) {
+  fail++; log.push('  THREW  ' + (err && err.stack || err));
+}
+
+const allPass = fail === 0;
+document.getElementById('out').textContent = log.join('\n');
+const hdr = document.getElementById('hdr');
+hdr.textContent = (allPass ? 'ALL PASS' : fail + ' FAILED') + ' — PlayerStore (' + pass + '/' + (pass + fail) + ')';
+hdr.className = allPass ? 'ok' : 'fail';
+window.__RESULT__ = { pass, fail, allPass };
+</script>
+</body>
+</html>
