@@ -6,11 +6,12 @@ _Last updated: 2026-06-26. This is the comprehensive project backlog: shelved wo
 
 ## 🎯 Active: ship as a real mobile app (Android + iOS)
 
-- [ ] **Phase 0 — Shelve both pool games** (in progress) — entry points removed; this backlog created.
-- [ ] **Phase 1 — Full functional QA pass + fixes** — headless smoke harness over every screen; fix confirmed geolocation bugs (below) + anything surfaced.
-- [ ] **Phase 2 — Venue overhaul (Google + Yelp)** — Yelp route in `worker.js`, merge OSM+Google+Yelp. _Gated on owner API keys._
-- [ ] **Phase 3 — PWA store-readiness** — manifest (`id`, `screenshots`, maskable icon), icons/screenshots, `privacy.html`, chat report/block (UGC), `sw.js` cache bump.
-- [ ] **Phase 4 — Android packaging & Play submission** — PWABuilder TWA, `assetlinks.json` at github.io domain root, Play account, 12-tester/14-day closed test, target API 36.
+- [x] **Phase 0 — Shelve both pool games** — entry points removed; backlog created. (commit d0188fe)
+- [x] **Phase 1 — Full functional QA pass + fixes** — headless smoke over every screen (0 errors); geolocation fixes shipped. (commit 5574906)
+- [x] **Phase 2 — Venue overhaul (Google + Yelp)** — Yelp route + 3-source merge shipped. (commit 339ebc5) _Activation gated on owner API keys._
+- [x] **Phase 3 — PWA store-readiness** — manifest (`id`/`screenshots`/maskable), icons, screenshots, feature graphic, `privacy.html`, chat block, cache v23. (commit cdafc77)
+- [x] **Phase 4 prep — submission package** — `store/` docs ready (checklist, listing, data-safety, content-rating, assetlinks template). (commit a8bede3)
+- [ ] **Phase 4 — Android packaging & Play submission** — OWNER actions in `store/SUBMISSION-CHECKLIST.md` (PWABuilder, Play account, asset links at github.io domain root, 12-tester/14-day test, API 36).
 - [ ] **Phase 5 — iOS** (deferred until Android traction) — Capacitor + cloud-Mac CI (Codemagic) + Apple Developer ($99/yr).
 
 ### Owner actions required (Claude can't do these)
@@ -24,14 +25,15 @@ _Last updated: 2026-06-26. This is the comprehensive project backlog: shelved wo
 
 ---
 
-## 🔧 Known QA findings to fix (Phase 1)
+## 🔧 QA findings (Phase 1 — DONE)
 
-- [ ] `index.html:~3355` — `isSecure` is computed but never used; either gate geolocation on it with a clear message or remove the dead var.
-- [ ] `index.html:~3324` — `mpGeoSuccess` reads `d.address.city`; throws if Nominatim returns no `address`. Guard `(d.address || {})`.
-- [ ] Venues — GPS only fires once at `window.onload` with no retry. Add a **"Refresh location"** button on the Venues screen that re-calls `getCurrentPosition`.
-- [ ] `index.html:~3367` — `watchPosition` runs continuously with `enableHighAccuracy:true` (battery drain). Use one high-accuracy fix + lower-accuracy watch, or a toggle.
-- [ ] Venues feel "broken" mostly because `VENUE_PROXY_URL` is blank → sparse OSM/Overpass fallback. Fixed by Phase 2 (activate Google + add Yelp).
-- [ ] Add chat **report/block** to Community (Play UGC requirement) and tighten Firebase security rules.
+- [x] `isSecure` was computed but unused → now gates geolocation with a clear "needs HTTPS" message.
+- [x] `mpGeoSuccess` `d.address.city` could throw on no-address → guarded `(d.address||{})`.
+- [x] Venues "Refresh" button only re-rendered stale data → now `refreshLocation()` re-acquires a fresh GPS fix + re-searches.
+- [x] `watchPosition` high-accuracy battery drain → watch now low-accuracy, one-shot fix stays high.
+- [x] Venues sparse because `VENUE_PROXY_URL` blank → Phase 2 added Google+Yelp+OSM merge (OSM still the free baseline until keys set).
+- [x] Chat report/block — report + profanity filter already existed; added per-user **block** (local blocklist) for Apple UGC compliance.
+- [ ] _Still TODO:_ tighten Firebase Realtime DB security rules (cap message length, scope writes to auth) — owner sets these in the Firebase console.
 
 ---
 
