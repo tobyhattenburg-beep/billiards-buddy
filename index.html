@@ -305,7 +305,6 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
       <div class="nav-item" onclick="showScreen('community')"><span class="nav-icon">&#128172;</span><span class="nav-label">Community</span></div>
       <div class="nav-item" onclick="showScreen('profile')"><span class="nav-icon">&#128100;</span><span class="nav-label">My Profile</span></div>
       <div class="nav-item" onclick="showScreen('analyzer')"><span class="nav-icon">&#127919;</span><span class="nav-label">Shot Analyzer</span></div>
-      <div class="nav-item" onclick="showScreen('game')"><span class="nav-icon">&#127921;</span><span class="nav-label">Play Pool</span></div>
     </nav>
     <div class="sidebar-footer">v10.0 &#8212; PWA</div>
   </aside>
@@ -324,8 +323,6 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
       </div>
       <div class="content">
         <div class="grid-3" style="margin-top:14px;">
-          <div class="card clickable" onclick="showScreen('game')" style="text-align:center;padding:20px 10px;border-color:rgba(200,134,10,0.5);background:rgba(212,160,23,0.08);"><div style="font-size:26px;margin-bottom:8px;">&#127921;</div><div style="font-size:11px;color:var(--gold2);font-weight:700;">Play Pool</div></div>
-          <div class="card clickable" onclick="open3DGame()" style="text-align:center;padding:20px 10px;border-color:rgba(176,107,255,0.5);background:rgba(176,107,255,0.1);"><div style="font-size:26px;margin-bottom:8px;">&#127920;</div><div style="font-size:11px;color:#c9a6ff;font-weight:700;">3D Career</div></div>
           <div class="card clickable" onclick="showScreen('venues')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#128205;</div><div style="font-size:11px;color:var(--dim)">Venues</div></div>
           <div class="card clickable" onclick="showScreen('analyzer')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#127919;</div><div style="font-size:11px;color:var(--dim)">Analyzer</div></div>
           <div class="card clickable" onclick="showScreen('score')" style="text-align:center;padding:20px 10px;"><div style="font-size:26px;margin-bottom:8px;">&#127942;</div><div style="font-size:11px;color:var(--dim)">Score</div></div>
@@ -851,8 +848,6 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
   <div class="more-drawer-item" onclick="drawerNav('tips')"><span class="more-item-icon">&#127775;</span><div><div class="more-item-label">Tips &amp; Strategy</div><div class="more-item-sub">Pro Technique &amp; Game Plans</div></div></div>
   <div class="more-drawer-item" onclick="drawerNav('community')"><span class="more-item-icon">&#128172;</span><div><div class="more-item-label">Community</div><div class="more-item-sub">Chat with Players Worldwide</div></div></div>
   <div class="more-drawer-item" onclick="drawerNav('analyzer')"><span class="more-item-icon">&#127919;</span><div><div class="more-item-label">Shot Analyzer</div><div class="more-item-sub">Geometry &amp; AI Shot Coaching</div></div></div>
-  <div class="more-drawer-item" onclick="drawerNav('game')"><span class="more-item-icon">&#127921;</span><div><div class="more-item-label">Play Pool</div><div class="more-item-sub">9-Ball Physics Game</div></div></div>
-  <div class="more-drawer-item" onclick="open3DGame()"><span class="more-item-icon">&#127920;</span><div><div class="more-item-label">3D Career</div><div class="more-item-sub">Hustle Kings 3D — wins sync to your rank</div></div></div>
 </div>
 
 <script>
@@ -2101,7 +2096,7 @@ function sendChallenge(p){
             .then(function(){ showToast('⚔ Challenge sent to '+p.name+'!','success'); })
             .catch(function(){ showToast('Could not send challenge.','gold'); });
     } else {
-        showToast('⚔ '+p.name+' is an AI — take them on in the 3D Career game!','gold');
+        showToast('⚔ '+p.name+' is an AI opponent — challenge a real player to compete!','gold');
     }
 }
 function renderChallenges(){
