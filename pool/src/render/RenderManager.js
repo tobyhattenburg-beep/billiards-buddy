@@ -64,7 +64,8 @@ export class RenderManager {
     this._buildLights();
     this._buildTable();
 
-    window.addEventListener('resize', () => this.resize());
+    this._onResize = () => this.resize();
+    window.addEventListener('resize', this._onResize);
     return this;
   }
 
@@ -355,6 +356,7 @@ export class RenderManager {
   }
 
   dispose() {
+    if (this._onResize) window.removeEventListener('resize', this._onResize);
     for (const [, rec] of this._meshes) this.scene.remove(rec.mesh);
     this._meshes.clear();
     for (const d of this._disposables) { try { d.dispose(); } catch (e) {} }

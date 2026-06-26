@@ -41,7 +41,7 @@ if (advMatch) {
   game.start({ autoLoop: false });
   const secs = parseFloat(advMatch[1]);
   game.state = 'shooting';
-  game.physics.strike(1, 0.045, 8.2, { vert: 0.2 });
+  game.physics.strike(1, 0.045, 10.5, { vert: 0.2 });
   const FIXED = 1 / 120;
   for (let i = 0; i < secs / FIXED && !game.physics.isResting(); i++) {
     game.physics.step(FIXED);
@@ -68,6 +68,14 @@ window.__INFO__ = () => ({
   drawCalls: game.render.renderer.info.render.calls,
   triangles: game.render.renderer.info.render.triangles,
   hasUI: !!document.querySelector('.pg-shoot'),
+  spread: (() => {
+    // object-ball bounding-box diagonal — a quantitative scatter measure
+    let xs = [], zs = [];
+    for (const b of game.physics.balls) { if (b.active && !b.isCue) { xs.push(b.x); zs.push(b.z); } }
+    if (xs.length < 2) return 0;
+    const dx = Math.max(...xs) - Math.min(...xs), dz = Math.max(...zs) - Math.min(...zs);
+    return +Math.hypot(dx, dz).toFixed(3);
+  })(),
 });
 // surface the readout in the DOM so --dump-dom can confirm it headlessly
 try { document.getElementById('tag').textContent = JSON.stringify(window.__INFO__()); } catch (e) {}

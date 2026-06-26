@@ -23,7 +23,7 @@ import { UIManager } from '../ui/UIManager.js';
 import { Loop } from './Loop.js';
 import { TABLE, rackPositions, cueStartPosition } from './TableSpec.js';
 
-const MAX_SPEED = 9.0;     // world u/s at full power
+const MAX_SPEED = 11.0;    // world u/s at full power (a firm break really scatters the rack)
 const MIN_SPEED = 0.8;     // a feather tap still moves the ball
 
 export class Game {

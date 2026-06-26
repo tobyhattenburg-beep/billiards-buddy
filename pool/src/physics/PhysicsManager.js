@@ -32,11 +32,11 @@ import { TABLE } from '../core/TableSpec.js';
 // --- Tunables (tuned to the TableSpec world scale) ----------
 const PHYS = Object.freeze({
   g: 15.0,            // gravity * 1 (world accel scale)
-  muSlide: 0.20,      // kinetic friction while sliding
+  muSlide: 0.16,      // kinetic friction while sliding (lower => cue keeps more pace into the rack)
   muRoll: 0.016,      // rolling resistance (~8% of slide, matches real cloth)
   muSpin: 2.4,        // english (wy) decay rate [1/s]
   slipEps: 0.02,      // |contact slip| below this => treat as rolling
-  eBall: 0.95,        // ball-ball restitution
+  eBall: 0.96,        // ball-ball restitution (higher => break energy survives the 15-ball chain)
   eCush: 0.85,        // cushion restitution
   throwBall: 0.18,    // fraction of relative english transferred to throw on ball hits
   cushThrow: 0.12,    // how strongly english bends a cushion rebound

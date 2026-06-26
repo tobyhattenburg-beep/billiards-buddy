@@ -5,8 +5,10 @@
    value (position, look target, fov) toward a per-mode goal with
    FRAME-RATE-INDEPENDENT exponential smoothing, which is what
    produces Hustle-Kings' smooth sweeping transitions instead of
-   snapping. It also reports a focus distance so the render
-   pipeline can blur the background (depth of field) while aiming.
+   snapping. It also exposes getFocus() — a focus distance/strength
+   the render pipeline CAN consume for a depth-of-field pass while
+   aiming. (The DoF post-process isn't wired in RenderManager yet;
+   getFocus() is the ready hook for when it is.)
 
    MODES
    - aim:      low and tight behind the cue ball, looking down the
