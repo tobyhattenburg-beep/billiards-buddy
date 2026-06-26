@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PhysicsManager — self test</title>
+<style>
+  body{margin:0;background:#05070f;color:#eaf2ff;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;}
+  #wrap{display:flex;gap:18px;padding:18px;flex-wrap:wrap;}
+  #report{white-space:pre;background:#0a0f1c;border:1px solid #1d2a4a;border-radius:10px;padding:14px;min-width:420px;}
+  .pass{color:#39e08a;} .fail{color:#ff5a5a;} h1{font-size:16px;margin:0 0 8px;color:#36e6ff;}
+  canvas{background:#04060c;border:1px solid #1d2a4a;border-radius:10px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div>
+    <h1>HEADLESS ASSERTIONS</h1>
+    <pre id="report">running…</pre>
+  </div>
+  <div>
+    <h1>LIVE BREAK (top-down)</h1>
+    <canvas id="view" width="440" height="240"></canvas>
+  </div>
+</div>
+
+<script type="module">
+import { PhysicsManager } from '../src/physics/PhysicsManager.js';
+import { TABLE, rackPositions, cueStartPosition } from '../src/core/TableSpec.js';
+
+const FIXED = 1 / 120;
+const lines = [];
+let passes = 0, fails = 0;
+function ok(name, cond, detail = '') {
+  (cond ? passes++ : fails++);
+  lines.push(`${cond ? '  PASS' : '  FAIL'}  ${name}${detail ? '  — ' + detail : ''}`);
+}
+
+// Run a sim to rest (or step cap), tracking peak KE growth + overlaps.
+function runToRest(pm, cap = 6000) {
+  let prevK = pm.totalKinetic();
+  let maxKGrowth = 0, steps = 0;
+  for (; steps < cap; steps++) {
+    pm.step(FIXED);
+    const k = pm.totalKinetic();
+    maxKGrowth = Math.max(maxKGrowth, k - prevK); // collisions only ever remove energy
+    prevK = k;
+    if (pm.isResting()) break;
+  }
+  return { steps, maxKGrowth };
+}
+function worstOverlap(pm) {
+  let worst = 0;
+  const b = pm.balls.filter(x => x.active);
+  for (let i = 0; i < b.length; i++)
+    for (let j = i + 1; j < b.length; j++) {
+      const d = Math.hypot(b[i].x - b[j].x, b[i].z - b[j].z);
+      worst = Math.max(worst, 2 * TABLE.R - d);
+    }
+  return worst;
+}
+function inBounds(pm) {
+  return pm.balls.filter(x => x.active)
+    .every(b => Math.abs(b.x) <= TABLE.limX + 1e-6 && Math.abs(b.z) <= TABLE.limZ + 1e-6);
+}
+
+// ---- TEST 1: cushion CCD / no tunnelling at max speed ----------
+{
+  const pm = new PhysicsManager();
+  const b = pm.addBall(0, 0, { isCue: true });
+  b.vx = 60; // absurd speed straight at the +x rail (far above any real break)
+  let escaped = false;
+  for (let i = 0; i < 4000 && !pm.isResting(); i++) {
+    pm.step(FIXED);
+    if (Math.abs(b.x) > TABLE.HX + 1e-3 && b.active) escaped = true;
+  }
+  ok('cushion: 60 u/s ball never leaves table (no tunnelling)', !escaped && b.active);
+  ok('cushion: ball comes to rest inside the rails',
+     b.active && Math.abs(b.x) <= TABLE.limX + 1e-6, `x=${b.x.toFixed(3)} lim=${TABLE.limX.toFixed(3)}`);
+}
+
+// ---- TEST 2: ball/ball CCD at speed, no pass-through ----------
+{
+  const pm = new PhysicsManager();
+  const a = pm.addBall(-1.0, 0, { isCue: true });
+  pm.addBall(0, 0, {});
+  a.vx = 50; // fast enough to skip past in one frame without CCD
+  let maxOverlap = 0;
+  for (let i = 0; i < 4000 && !pm.isResting(); i++) {
+    pm.step(FIXED);
+    maxOverlap = Math.max(maxOverlap, worstOverlap(pm));
+  }
+  ok('ball-ball: high-speed hit transfers momentum (cue stops, object moves)',
+     Math.abs(a.vx) < 1.0, `cue vx=${a.vx.toFixed(2)}`);
+  ok('ball-ball: never inter-penetrate more than 1% of radius',
+     maxOverlap < TABLE.R * 0.01, `worstOverlap=${maxOverlap.toExponential(2)}`);
+}
+
+// ---- TEST 3: energy never increases; full rack settles ----------
+let breakPM;
+{
+  const pm = new PhysicsManager();
+  breakPM = pm;
+  const cue = cueStartPosition();
+  pm.addBall(cue.x, cue.z, { isCue: true });
+  for (const p of rackPositions()) pm.addBall(p.x, p.z, { id: p.id });
+  pm.strike(1, 0.04, 7.2, { vert: 0.2 }); // hard break, slight follow + tiny cut
+  const startK = pm.totalKinetic();
+  const { steps, maxKGrowth } = runToRest(pm);
+  ok('rack: total kinetic energy is monotonically non-increasing',
+     maxKGrowth < startK * 1e-3, `maxGrowth=${maxKGrowth.toExponential(2)} of ${startK.toFixed(2)}`);
+  ok('rack: simulation reaches rest (terminates, no perpetual motion)',
+     pm.isResting(), `steps=${steps}`);
+  ok('rack: every surviving ball is in bounds & non-overlapping',
+     inBounds(pm) && worstOverlap(pm) < TABLE.R * 0.02);
+}
+
+// ---- TEST 4: draw vs follow land the cue ball on opposite sides ----------
+// Differential test: identical straight shot into a frozen object ball,
+// once with heavy DRAW (back-spin) and once with heavy FOLLOW (top-spin).
+// Real cue-ball behaviour: follow rolls forward through the contact,
+// draw reverses back. The only difference between the runs is spin sign.
+function cueRestX(vert) {
+  const pm = new PhysicsManager();
+  const cue = pm.addBall(-1.2, 0, { isCue: true });
+  const obj = pm.addBall(0.4, 0, {});     // object ball dead ahead
+  pm.strike(1, 0, 5.0, { vert });
+  // Remove the object ball the instant it's struck so its cushion
+  // rebound can't fly back and re-hit the cue — we're isolating the
+  // cue ball's own follow/draw behaviour through the contact.
+  let struck = false;
+  for (let i = 0; i < 4000 && !pm.isResting(); i++) {
+    pm.step(FIXED);
+    if (!struck) for (const e of pm.drainEvents())
+      if (e.type === 'click') { obj.active = false; struck = true; break; }
+  }
+  return cue.x;
+}
+{
+  const drawX = cueRestX(-1);   // heavy draw
+  const followX = cueRestX(+1); // heavy follow
+  ok('spin: follow finishes ahead of draw (top-spin vs back-spin diverge)',
+     followX > drawX + 0.3, `follow x=${followX.toFixed(3)}  vs  draw x=${drawX.toFixed(3)}`);
+  ok('spin: draw pulls the cue ball back behind the object ball',
+     drawX < 0.4, `draw rests at x=${drawX.toFixed(3)}`);
+}
+
+// ---- write report ----------
+const head = fails === 0
+  ? `ALL ${passes} CHECKS PASSED`
+  : `${passes} passed, ${fails} FAILED`;
+const el = document.getElementById('report');
+el.className = fails === 0 ? 'pass' : 'fail';
+el.textContent = head + '\n\n' + lines.join('\n');
+document.title = (fails === 0 ? 'PASS' : 'FAIL') + ' — physics self test';
+
+// ---- live visualization of the break (purely cosmetic) ----------
+(function draw() {
+  const c = document.getElementById('view'), g = c.getContext('2d');
+  const sx = c.width / (TABLE.HX * 2 + 0.3), sz = c.height / (TABLE.HZ * 2 + 0.3);
+  const sc = Math.min(sx, sz), ox = c.width / 2, oz = c.height / 2;
+  const X = x => ox + x * sc, Z = z => oz + z * sc;
+  // animate a fresh break in the viewer
+  const vis = new PhysicsManager();
+  const cu = cueStartPosition();
+  vis.addBall(cu.x, cu.z, { isCue: true });
+  for (const p of rackPositions()) vis.addBall(p.x, p.z, { id: p.id });
+  vis.strike(1, 0.05, 7.0, { vert: 0.25 });
+  function frame() {
+    if (!vis.isResting()) vis.step(FIXED);
+    g.clearRect(0, 0, c.width, c.height);
+    g.fillStyle = '#0b5a2a';
+    g.fillRect(X(-TABLE.HX), Z(-TABLE.HZ), TABLE.HX * 2 * sc, TABLE.HZ * 2 * sc);
+    g.fillStyle = '#04060c';
+    for (const p of TABLE.pockets) { g.beginPath(); g.arc(X(p.x), Z(p.z), TABLE.pocketCapture * sc, 0, 7); g.fill(); }
+    for (const b of vis.balls) {
+      if (!b.active) continue;
+      g.fillStyle = b.isCue ? '#f5f0e2' : '#ffd24a';
+      g.beginPath(); g.arc(X(b.x), Z(b.z), TABLE.R * sc, 0, 7); g.fill();
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+})();
+</script>
+</body>
+</html>

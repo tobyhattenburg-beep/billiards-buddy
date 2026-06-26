@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Game — integration test</title>
+<style>
+  html,body{margin:0;height:100%;background:#05070d;overflow:hidden;}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;}
+  #tag{position:fixed;left:12px;top:10px;z-index:20;font:12px ui-monospace,monospace;color:#9ef6ff;
+       background:rgba(10,16,30,.7);border:1px solid #1d2a4a;border-radius:8px;padding:6px 10px;pointer-events:none;}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="tag">Game integration</div>
+<script type="module">
+import { Game } from '../src/core/Game.js';
+
+const game = new Game({ canvas: document.getElementById('gl'), uiRoot: document.body });
+if (location.search.includes('noui')) game.ui.mount = () => game.ui;  // headless: skip backdrop-filter overlay
+
+// ?adv=<seconds> : deterministic headless pre-roll. Break the rack and
+// step physics SYNCHRONOUSLY (rAF/virtual-time can't be relied on under
+// --screenshot), then frame the spread with the action cam.
+const advMatch = location.search.match(/adv=([\d.]+)/);
+try {
+if (advMatch) {
+  // Deterministic pre-roll: break the rack synchronously so the
+  // scene has a known scattered state, then hand control to the live
+  // Loop (a continuous rAF is what lets headless actually capture a
+  // frame — a one-shot render with no rAF never composites).
+  game.start({ autoLoop: false });
+  const secs = parseFloat(advMatch[1]);
+  game.state = 'shooting';
+  game.physics.strike(1, 0.045, 8.2, { vert: 0.2 });
+  const FIXED = 1 / 120;
+  for (let i = 0; i < secs / FIXED && !game.physics.isResting(); i++) {
+    game.physics.step(FIXED);
+    game.physics.drainEvents();
+  }
+  game.camera.setCentroid(...game._centroid());
+  game.camera.setMode('action', { instant: true });
+  game.loop.start();
+} else {
+  game.start();
+}
+} catch (err) {
+  window.__ERR__ = String(err && err.stack || err);
+  const t = document.getElementById('tag');
+  if (t) { t.textContent = 'ERR: ' + (err && err.message || err); t.style.color = '#ff6b6b'; }
+}
+
+window.__READY__ = true;
+window.__INFO__ = () => ({
+  state: game.state,
+  potted: game.potted,
+  shots: game.shots,
+  activeBalls: game.physics.balls.filter(b => b.active).length,
+  drawCalls: game.render.renderer.info.render.calls,
+  triangles: game.render.renderer.info.render.triangles,
+  hasUI: !!document.querySelector('.pg-shoot'),
+});
+// surface the readout in the DOM so --dump-dom can confirm it headlessly
+try { document.getElementById('tag').textContent = JSON.stringify(window.__INFO__()); } catch (e) {}
+</script>
+</body>
+</html>

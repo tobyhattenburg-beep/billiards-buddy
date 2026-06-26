@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>RenderManager — visual test</title>
+<style>
+  html,body{margin:0;height:100%;background:#05070d;overflow:hidden;}
+  #gl{position:fixed;inset:0;width:100%;height:100%;display:block;}
+  #tag{position:fixed;left:12px;top:10px;z-index:5;font:12px ui-monospace,monospace;color:#36e6ff;
+       background:rgba(10,16,30,.7);border:1px solid #1d2a4a;border-radius:8px;padding:6px 10px;}
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="tag">RenderManager — live break</div>
+<script type="module">
+import { PhysicsManager } from '../src/physics/PhysicsManager.js';
+import { RenderManager } from '../src/render/RenderManager.js';
+import { Loop } from '../src/core/Loop.js';
+import { TABLE, rackPositions, cueStartPosition } from '../src/core/TableSpec.js';
+
+const pm = new PhysicsManager();
+const cue = cueStartPosition();
+pm.addBall(cue.x, cue.z, { isCue: true, id: 0 }); // id 0 = cue; rack uses 1..15
+for (const p of rackPositions()) pm.addBall(p.x, p.z, { id: p.id });
+
+const rm = new RenderManager(document.getElementById('gl'), TABLE).init();
+rm.setBalls(pm.balls);
+
+// Deterministic pre-roll for headless verification: ?adv=<seconds>
+// breaks the rack and advances physics synchronously, so the first
+// rendered frame is a known state independent of virtual-time quirks.
+const advMatch = location.search.match(/adv=([\d.]+)/);
+if (advMatch) {
+  const secs = parseFloat(advMatch[1]);
+  pm.strike(1, 0.05, 7.0, { vert: 0.25 });
+  const FIXED = 1 / 120;
+  for (let i = 0; i < secs / FIXED && !pm.isResting(); i++) pm.step(FIXED);
+}
+
+// break shortly after start (unless ?nobreak)
+const noBreak = location.search.includes('nobreak') || !!advMatch;
+let t = 0, struck = false;
+const loop = new Loop({
+  hz: 120,
+  update: (dt) => {
+    t += dt;
+    if (!noBreak && !struck && t > 0.4) { pm.strike(1, 0.05, 7.0, { vert: 0.25 }); struck = true; }
+    pm.step(dt);
+    pm.drainEvents();
+  },
+  render: (alpha) => rm.render(pm.balls, alpha),
+});
+loop.start();
+
+// expose for the headless harness to confirm WebGL actually drew
+window.__READY__ = true;
+window.__INFO__ = () => ({
+  drawCalls: rm.renderer.info.render.calls,
+  triangles: rm.renderer.info.render.triangles,
+  textures: rm.renderer.info.memory.textures,
+  geometries: rm.renderer.info.memory.geometries,
+  balls: pm.balls.filter(b => b.active).length,
+});
+</script>
+</body>
+</html>
