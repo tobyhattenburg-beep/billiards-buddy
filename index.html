@@ -13,8 +13,11 @@
 <!-- PWA: Theme color -->
 <meta name="theme-color" content="#d4a017">
 <!-- PWA: iOS home screen icon -->
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="dns-prefetch" href="https://unpkg.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -306,7 +309,7 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
       <div class="nav-item" onclick="showScreen('profile')"><span class="nav-icon">&#128100;</span><span class="nav-label">My Profile</span></div>
       <div class="nav-item" onclick="showScreen('analyzer')"><span class="nav-icon">&#127919;</span><span class="nav-label">Shot Analyzer</span></div>
     </nav>
-    <div class="sidebar-footer">v10.0 &#8212; PWA</div>
+    <div class="sidebar-footer">v10.0 &#8212; PWA<br><a href="privacy.html" style="color:var(--dim);font-size:10px;text-decoration:underline;">Privacy Policy</a></div>
   </aside>
   <main id="main">
 
@@ -2415,6 +2418,7 @@ function listenRoom(room) {
 function renderCommunityMessages(msgs) {
     var m = document.getElementById('community-messages');
     if (!m) return;
+    msgs = (msgs || []).filter(function(msg){ return !_isBlocked(msg.uid); }); // hide blocked users
     if (!msgs.length) {
         m.innerHTML = '<p style="text-align:center;color:var(--dim);font-family:\'DM Mono\';font-size:11px;padding:30px 0;">No messages yet — say hello!</p>';
         return;
@@ -2429,7 +2433,8 @@ function renderCommunityMessages(msgs) {
             + '<div class="cm-avatar" style="background:'+aColor+';">'+initials+'</div>'
             + '<div class="cm-body">'
             + '<div class="cm-meta"><span class="cm-name">'+(msg.user||'Anonymous')+'</span><span class="cm-time">'+time+'</span>'
-            + '<button class="cm-report" onclick="reportMessage(\''+key+'\',\''+_communityRoom+'\')" title="Report message">&#128681;</button></div>'
+            + '<button class="cm-report" onclick="reportMessage(\''+key+'\',\''+_communityRoom+'\')" title="Report message">&#128681;</button>'
+            + '<button class="cm-report" onclick="blockUser(\''+escCom(msg.uid||'')+'\')" title="Block this user">&#128683;</button></div>'
             + '<div class="cm-text">'+escCom(msg.text||'')+'</div>'
             + '</div></div>';
     }).join('');
@@ -2447,6 +2452,23 @@ function reportMessage(key, room) {
     _fbDb.ref('reports/'+room+'/'+key).set({reporter:_fbUser.uid,ts:Date.now()})
         .then(function(){ showToast('Message reported. Thank you.','info'); })
         .catch(function(){ showToast('Could not send report.','gold'); });
+}
+
+// Local user blocklist — hides an abusive user's messages on this device
+// (required for app-store user-generated-content policies).
+function _blockedList(){ try { return JSON.parse(localStorage.getItem('bb_blocked')||'[]'); } catch(e){ return []; } }
+function _isBlocked(uid){ return !!uid && _blockedList().indexOf(uid) !== -1; }
+function blockUser(uid){
+    if (!uid) return;
+    if (_fbUser && uid === _fbUser.uid) { showToast('You can\'t block yourself.','gold'); return; }
+    var list = _blockedList();
+    if (list.indexOf(uid) === -1) { list.push(uid); try { localStorage.setItem('bb_blocked', JSON.stringify(list)); } catch(e){} }
+    showToast('User blocked — their messages are now hidden.','info');
+    if (_fbDb && _communityRoom) {
+        _fbDb.ref('community/'+_communityRoom).limitToLast(60).once('value', function(snap){
+            var msgs=[]; snap.forEach(function(c){ var v=c.val(); v._key=c.key; msgs.push(v); }); renderCommunityMessages(msgs);
+        });
+    }
 }
 
 function sendCommunityMessage() {

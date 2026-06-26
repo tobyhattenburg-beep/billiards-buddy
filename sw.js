@@ -7,14 +7,17 @@
 // and the old cache is purged on activate.
 // ============================================================
 
-const CACHE_NAME = 'bb-cache-v22';
+const CACHE_NAME = 'bb-cache-v23';
 
 const PRECACHE_URLS = [
   './',
   './index.html',
   './manifest.json',
+  './privacy.html',
   './icon-192.png',
   './icon-512.png',
+  './icon-512-maskable.png',
+  './apple-touch-icon-180.png',
   './icon-192.svg',
   './icon-512.svg'
 ];
