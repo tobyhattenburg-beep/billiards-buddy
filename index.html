@@ -341,7 +341,7 @@ body{background:#0a0b0d;font-family:'Libre Baskerville',Georgia,serif;color:var(
       <div class="content">
         <div class="card gold-card" style="display:flex;align-items:center;justify-content:space-between;padding:12px;">
           <div style="display:flex;align-items:center;gap:8px;"><span>&#128205;</span><span id="location-status" style="font-size:11px;font-family:'DM Mono';color:var(--gold2);">Acquiring GPS...</span></div>
-          <button class="pill active" onclick="renderVenues()">Refresh</button>
+          <button class="pill active" onclick="refreshLocation()">Refresh</button>
         </div>
         <div id="venues-map"></div>
         <div id="venue-filters" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
@@ -3316,8 +3316,9 @@ function mpGeoSuccess(pos, locEl) {
     fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json')
         .then(function(r){ return r.json(); })
         .then(function(d){
-            var city = d.address.city || d.address.town || d.address.suburb || d.address.village || 'Your Area';
-            var state = d.address.state_code || d.address.state || '';
+            var a = (d && d.address) || {};
+            var city = a.city || a.town || a.suburb || a.village || 'Your Area';
+            var state = a.state_code || a.state || '';
             if (locEl) { locEl.textContent = city + (state ? ', ' + state : '') + ' — Live GPS'; locEl.style.color = 'var(--green2)'; }
         })
         .catch(function(){ if(locEl) locEl.textContent = 'GPS Active (±' + acc + 'm)'; locEl.style.color = 'var(--green2)'; });
@@ -3346,29 +3347,42 @@ window.onload = function() {
     updateNotifBadge();
     renderSpeed();
     renderDiscover();
-    const locEl = document.getElementById('location-status');
+    acquireLocation();
+};
+
+// Acquire GPS + kick venue search. Reusable so the Venues "Refresh" button
+// can re-request a fresh fix. Pass {fresh:true} to bypass the dedup/cache.
+function acquireLocation(opts) {
+    opts = opts || {};
+    var locEl = document.getElementById('location-status');
     var isSecure = window.location.protocol === 'https:'
         || window.location.hostname === 'localhost'
         || window.location.hostname === '127.0.0.1';
-
-    if (navigator.geolocation) {
-        if (locEl) { locEl.textContent = 'Acquiring GPS signal...'; locEl.style.color = 'var(--gold2)'; }
-        navigator.geolocation.getCurrentPosition(
-            function(pos) { mpGeoSuccess(pos, locEl); },
-            function(err) { mpGeoError(err, locEl); },
-            { timeout:8000, maximumAge:60000, enableHighAccuracy:true }
-        );
-        if (!window._geoWatchId) {
-            window._geoWatchId = navigator.geolocation.watchPosition(
-                function(pos) { mpGeoSuccess(pos, locEl); },
-                function() { /* silent on watch errors */ },
-                { timeout:15000, maximumAge:30000, enableHighAccuracy:true }
-            );
-        }
-    } else {
+    if (!navigator.geolocation) {
         if (locEl) { locEl.textContent = 'GPS not supported - check browser settings'; locEl.style.color='var(--red2)'; }
+        return;
     }
-};
+    if (!isSecure) {
+        if (locEl) { locEl.textContent = 'Location needs a secure (HTTPS) connection — open the live app to find venues'; locEl.style.color='var(--gold)'; }
+        return;
+    }
+    if (opts.fresh) window._lastCoordKey = '';   // force a re-fetch even at the same spot
+    if (locEl) { locEl.textContent = opts.fresh ? 'Refreshing location…' : 'Acquiring GPS signal...'; locEl.style.color = 'var(--gold2)'; }
+    navigator.geolocation.getCurrentPosition(
+        function(pos) { mpGeoSuccess(pos, locEl); },
+        function(err) { mpGeoError(err, locEl); },
+        { timeout:8000, maximumAge: opts.fresh ? 0 : 60000, enableHighAccuracy:true }
+    );
+    if (!window._geoWatchId) {
+        // Watch at LOW accuracy to save battery — the one-shot fix above is high-accuracy.
+        window._geoWatchId = navigator.geolocation.watchPosition(
+            function(pos) { mpGeoSuccess(pos, locEl); },
+            function() { /* silent on watch errors */ },
+            { timeout:15000, maximumAge:30000, enableHighAccuracy:false }
+        );
+    }
+}
+function refreshLocation() { acquireLocation({ fresh:true }); }
 
 // ════════════════════════════════════════════════════════
 // SERVICE WORKER REGISTRATION
