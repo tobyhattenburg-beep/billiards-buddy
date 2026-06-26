@@ -1,7 +1,8 @@
 // Billiards Buddy — Cloudflare Worker (AI coaching + Google Places proxy)
 // Deploy to Cloudflare Workers, then add secrets:
-//   ANTHROPIC_KEY   — for the Shot Analyzer AI coaching (existing feature)
-//   GOOGLE_PLACES_KEY — for the venue finder (new). Server-side only, never shipped to the browser.
+//   ANTHROPIC_KEY     — for the Shot Analyzer AI coaching (existing feature)
+//   GOOGLE_PLACES_KEY — venue finder via Google Places. Server-side only, never shipped to the browser.
+//   YELP_API_KEY      — venue finder via Yelp Fusion. Either/both providers may be set; /venues merges them.
 //
 // In index.html set:
 //   AI_PROXY_URL    = "https://<your-worker>.workers.dev"          (AI coaching — root path)
@@ -56,8 +57,12 @@ export default {
 
     // ── Route: venue nearby search ───────────────────────────
     // POST /venues  { lat, lng, radius }  → { venues: [...] }
+    // Queries Google Places AND Yelp Fusion (whichever keys are present)
+    // in parallel and merges server-side. The client adds OpenStreetMap.
     if (path.endsWith('/venues') && request.method === 'POST') {
-      if (!env.GOOGLE_PLACES_KEY) return json({ error: 'GOOGLE_PLACES_KEY not configured.' }, 500);
+      if (!env.GOOGLE_PLACES_KEY && !env.YELP_API_KEY) {
+        return json({ error: 'No venue provider configured (set GOOGLE_PLACES_KEY and/or YELP_API_KEY).' }, 500);
+      }
       let body;
       try { body = await request.json(); } catch { return json({ error: 'Invalid JSON body.' }, 400); }
       const { lat, lng } = body;
@@ -65,33 +70,76 @@ export default {
       if (typeof lat !== 'number' || typeof lng !== 'number') {
         return json({ error: 'lat and lng (numbers) required.' }, 400);
       }
-      // "keyword" matches name + types; covers dedicated halls and bars with tables.
-      const params = `?location=${lat},${lng}&radius=${radius}` +
-        `&keyword=${encodeURIComponent('billiards pool hall snooker pool table')}` +
-        `&key=${env.GOOGLE_PLACES_KEY}`;
-      try {
+      const origin = `${url.protocol}//${url.host}`;
+
+      // Google Places Nearby Search — keyword covers dedicated halls + bars with tables.
+      async function googleVenues() {
+        if (!env.GOOGLE_PLACES_KEY) return [];
+        const params = `?location=${lat},${lng}&radius=${radius}` +
+          `&keyword=${encodeURIComponent('billiards pool hall snooker pool table')}` +
+          `&key=${env.GOOGLE_PLACES_KEY}`;
         const resp = await fetch(PLACES_NEARBY + params);
         const data = await resp.json();
-        if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-          return json({ error: `Places API: ${data.status}`, detail: data.error_message || '' }, 502);
-        }
-        const origin = `${url.protocol}//${url.host}`;
-        const venues = (data.results || []).map(function (p) {
+        if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') return [];
+        return (data.results || []).map(function (p) {
           const loc = (p.geometry && p.geometry.location) || {};
           const ref = p.photos && p.photos[0] && p.photos[0].photo_reference;
           return {
-            id: 'gp_' + p.place_id,
-            placeId: p.place_id,
-            name: p.name,
-            lat: loc.lat,
-            lng: loc.lng,
-            rating: p.rating || null,
-            userRatings: p.user_ratings_total || 0,
-            address: p.vicinity || '',
+            id: 'gp_' + p.place_id, placeId: p.place_id, name: p.name,
+            lat: loc.lat, lng: loc.lng, rating: p.rating || null,
+            userRatings: p.user_ratings_total || 0, address: p.vicinity || '',
             openNow: p.opening_hours ? !!p.opening_hours.open_now : null,
-            types: p.types || [],
+            types: p.types || [], source: 'google',
             photoUrl: ref ? `${origin}/photo?ref=${encodeURIComponent(ref)}&w=800` : null,
           };
+        });
+      }
+
+      // Yelp Fusion business search — image_url is directly usable (no key needed to display).
+      async function yelpVenues() {
+        if (!env.YELP_API_KEY) return [];
+        const params = `?latitude=${lat}&longitude=${lng}&radius=${Math.min(radius, 40000)}` +
+          `&term=${encodeURIComponent('pool hall billiards pool table')}` +
+          `&categories=poolhalls&limit=40&sort_by=distance`;
+        const resp = await fetch('https://api.yelp.com/v3/businesses/search' + params, {
+          headers: { Authorization: `Bearer ${env.YELP_API_KEY}` },
+        });
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        return (data.businesses || [])
+          .filter(function (b) { return b && b.is_closed !== true && b.coordinates; })
+          .map(function (b) {
+            const co = b.coordinates || {};
+            const da = (b.location && b.location.display_address) || [];
+            return {
+              id: 'yelp_' + b.id, name: b.name,
+              lat: co.latitude, lng: co.longitude,
+              rating: b.rating || null, userRatings: b.review_count || 0,
+              address: da.join(', '), openNow: null,
+              types: (b.categories || []).map(function (c) { return c.alias; }),
+              photoUrl: b.image_url || null, source: 'yelp',
+            };
+          });
+      }
+
+      try {
+        const lists = await Promise.all([
+          googleVenues().catch(function () { return []; }),
+          yelpVenues().catch(function () { return []; }),
+        ]);
+        // De-dup the same physical place across providers: same normalized
+        // name OR within ~55m. Backfill a missing photo/rating from the dup.
+        const norm = function (s) { return (s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); };
+        const venues = [];
+        [].concat(lists[0], lists[1]).forEach(function (v) {
+          if (!v || v.lat == null || v.lng == null) return;
+          const dup = venues.find(function (o) {
+            return (norm(o.name) && norm(o.name) === norm(v.name)) ||
+              (Math.abs(o.lat - v.lat) < 0.0005 && Math.abs(o.lng - v.lng) < 0.0005);
+          });
+          if (!dup) { venues.push(v); return; }
+          if (!dup.photoUrl && v.photoUrl) dup.photoUrl = v.photoUrl;
+          if (!dup.rating && v.rating) dup.rating = v.rating;
         });
         return json({ venues });
       } catch (e) {

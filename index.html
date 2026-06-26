@@ -1322,13 +1322,36 @@ function fetchNearbyVenues(lat, lng, accuracy) {
         });
     }
 
-    searchProxy(0)
-    .then(function(list){
-        if (list && list.length) return list;          // Google Places results
-        return fetchOverpass(24140);                    // free fallback within 15 mi
-    })
-    .then(function(list){
-        list = list || [];
+    // Merge venues from every source (Google Places + Yelp via the proxy,
+    // plus OpenStreetMap), de-duplicating the same physical place. A match
+    // is the same normalized name OR two points within ~55m; the richer
+    // record (photo, then rating) wins, and we backfill missing photo/rating.
+    function mergeVenues() {
+        var lists = [].slice.call(arguments), out = [];
+        function norm(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+        function richness(x){ return (x.photoUrl?2:0) + (x.rating?1:0); }
+        lists.forEach(function(list){ (list||[]).forEach(function(v){
+            if (!v || v.lat==null || v.lng==null) return;
+            var dup = out.find(function(o){
+                if (norm(o.name) && norm(o.name) === norm(v.name)) return true;
+                return Math.abs(o.lat-v.lat) < 0.0005 && Math.abs(o.lng-v.lng) < 0.0005;
+            });
+            if (!dup) { out.push(v); return; }
+            if (richness(v) > richness(dup)) { out[out.indexOf(dup)] = v; }
+            else { if(!dup.photoUrl && v.photoUrl) dup.photoUrl = v.photoUrl; if(!dup.rating && v.rating) dup.rating = v.rating; }
+        }); });
+        return out;
+    }
+
+    // Query the proxy (Google + Yelp) AND OpenStreetMap in parallel so the
+    // result set is the union of all three sources. When the proxy isn't
+    // configured, searchProxy yields [] and OSM alone carries the feature.
+    Promise.all([
+        searchProxy(0).then(function(l){ return l || []; }).catch(function(){ return []; }),
+        fetchOverpass(24140).catch(function(){ return []; })
+    ])
+    .then(function(results){
+        var list = mergeVenues(results[0], results[1]);
         list.sort(function(a,b){ return (a.distVal||999)-(b.distVal||999); });
         VENUES = list.slice(0,12);
         if (!VENUES.length) {
