@@ -1,6 +1,6 @@
 # Billiards Buddy — Local Test Server
 # Serves the project folder over HTTP so PWA / GPS / Service Worker all work.
-# Usage: Right-click → "Run with PowerShell"  OR  & "C:\billliards buddy\serve.ps1"
+# Usage: Right-click → "Run with PowerShell"  OR  & "C:\Users\Toby\Projects\games\billiards-buddy\serve.ps1"
 
 $port = 8080
 $root = $PSScriptRoot   # folder containing this script

@@ -2,7 +2,7 @@
 
 _Durable, committed copy of the approved plan. Last verified against live + git: 2026-07-06._
 
-Billiards Buddy is a live PWA (`C:\billliards buddy\`, repo `tobyhattenburg-beep/billiards-buddy`, deployed at https://tobyhattenburg-beep.github.io/billiards-buddy/). Goal: ship it on Google Play as a real Android app (iOS later), packaged as a **TWA via Bubblewrap CLI** run locally so builds are verifiable and repeatable for future updates.
+Billiards Buddy is a live PWA (`C:\Users\Toby\Projects\games\billiards-buddy\`, repo `tobyhattenburg-beep/billiards-buddy`, deployed at https://tobyhattenburg-beep.github.io/billiards-buddy/). Goal: ship it on Google Play as a real Android app (iOS later), packaged as a **TWA via Bubblewrap CLI** run locally so builds are verifiable and repeatable for future updates.
 
 ## Verified current state (2026-07-06)
 

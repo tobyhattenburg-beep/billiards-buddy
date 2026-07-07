@@ -35,7 +35,7 @@ Only do this if you want Yelp results merged in (extra coverage of bars/halls Go
 
 1. Go to <https://dash.cloudflare.com/sign-up> → create a **free** account (no card needed; free plan = 100,000 requests/day, far more than enough).
 2. Left sidebar → **Workers & Pages** → **Create** → **Create Worker** → name it `bb-api` (this becomes part of your URL) → **Deploy** (it deploys a hello-world first — that's fine).
-3. Click **Edit code** → select-all in the editor and delete → open `C:\billliards buddy\worker.js` on your PC (Notepad is fine) → copy the whole file → paste into the editor → **Deploy** (top right).
+3. Click **Edit code** → select-all in the editor and delete → open `C:\Users\Toby\Projects\games\billiards-buddy\worker.js` on your PC (Notepad is fine) → copy the whole file → paste into the editor → **Deploy** (top right).
 4. Add the secrets: go back to the worker's page → **Settings** tab → **Variables and Secrets** → **+ Add**:
    - Type: **Secret** · Name: `GOOGLE_PLACES_KEY` · Value: the key from step 1 → Save
    - (optional) Type: **Secret** · Name: `YELP_API_KEY` · Value: the key from step 2 → Save
@@ -46,7 +46,7 @@ Only do this if you want Yelp results merged in (extra coverage of bars/halls Go
 
 ## 4. Point the app at the worker
 
-In `C:\billliards buddy\index.html`, near line 1698, find:
+In `C:\Users\Toby\Projects\games\billiards-buddy\index.html`, near line 1698, find:
 
 ```js
 const AI_PROXY_URL = '';
