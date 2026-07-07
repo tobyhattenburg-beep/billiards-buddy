@@ -11,8 +11,14 @@
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const MODEL = 'claude-sonnet-4-6';
-const PLACES_NEARBY = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json';
-const PLACES_PHOTO = 'https://maps.googleapis.com/maps/api/place/photo';
+// Places API (New) — the legacy nearbysearch/photo endpoints can no longer be
+// enabled on new Google Cloud projects (legacy was frozen March 2025).
+const PLACES_TEXTSEARCH = 'https://places.googleapis.com/v1/places:searchText';
+const PLACES_MEDIA = 'https://places.googleapis.com/v1/'; // + places/<id>/photos/<ref>/media
+// rating/userRatingCount/currentOpeningHours bill at the Enterprise SKU
+// (~1K free calls/mo vs Pro's ~5K). Set false to drop them and stay on Pro;
+// the client renders fine without rating/openNow.
+const GOOGLE_RICH_FIELDS = true;
 
 function corsHeaders(extra) {
   return Object.assign({
@@ -37,13 +43,18 @@ export default {
     }
 
     // ── Route: venue photo proxy ─────────────────────────────
-    // GET /photo?ref=<photo_reference>&w=800  → streams the image with the key kept server-side.
+    // GET /photo?ref=places/<place_id>/photos/<photo_id>&w=800
+    // → streams the image with the key kept server-side. `ref` is the
+    // Places API (New) photo resource name from photos[].name.
     if (path.endsWith('/photo') && request.method === 'GET') {
       if (!env.GOOGLE_PLACES_KEY) return json({ error: 'GOOGLE_PLACES_KEY not configured.' }, 500);
       const ref = url.searchParams.get('ref');
-      if (!ref) return json({ error: 'Missing photo ref.' }, 400);
+      if (!ref || !/^places\/[A-Za-z0-9_-]+\/photos\/[A-Za-z0-9_-]+$/.test(ref)) {
+        return json({ error: 'Missing or malformed photo ref.' }, 400);
+      }
       const w = Math.min(parseInt(url.searchParams.get('w') || '800', 10) || 800, 1200);
-      const photoUrl = `${PLACES_PHOTO}?maxwidth=${w}&photo_reference=${encodeURIComponent(ref)}&key=${env.GOOGLE_PLACES_KEY}`;
+      // /media 302-redirects to the image; Workers fetch follows it.
+      const photoUrl = `${PLACES_MEDIA}${ref}/media?maxWidthPx=${w}&key=${env.GOOGLE_PLACES_KEY}`;
       const img = await fetch(photoUrl);
       return new Response(img.body, {
         status: img.status,
@@ -72,27 +83,57 @@ export default {
       }
       const origin = `${url.protocol}//${url.host}`;
 
-      // Google Places Nearby Search — keyword covers dedicated halls + bars with tables.
+      // Google Places Text Search (New) — a text query covers dedicated halls +
+      // bars with tables (Nearby Search (New) has no keyword param; Google's
+      // migration guide says keyword users should move to Text Search).
       async function googleVenues() {
         if (!env.GOOGLE_PLACES_KEY) return [];
-        const params = `?location=${lat},${lng}&radius=${radius}` +
-          `&keyword=${encodeURIComponent('billiards pool hall snooker pool table')}` +
-          `&key=${env.GOOGLE_PLACES_KEY}`;
-        const resp = await fetch(PLACES_NEARBY + params);
-        const data = await resp.json();
-        if (data.status && data.status !== 'OK' && data.status !== 'ZERO_RESULTS') return [];
-        return (data.results || []).map(function (p) {
-          const loc = (p.geometry && p.geometry.location) || {};
-          const ref = p.photos && p.photos[0] && p.photos[0].photo_reference;
-          return {
-            id: 'gp_' + p.place_id, placeId: p.place_id, name: p.name,
-            lat: loc.lat, lng: loc.lng, rating: p.rating || null,
-            userRatings: p.user_ratings_total || 0, address: p.vicinity || '',
-            openNow: p.opening_hours ? !!p.opening_hours.open_now : null,
-            types: p.types || [], source: 'google',
-            photoUrl: ref ? `${origin}/photo?ref=${encodeURIComponent(ref)}&w=800` : null,
-          };
+        const fields = 'places.id,places.displayName,places.location,' +
+          'places.formattedAddress,places.types,places.photos' +
+          (GOOGLE_RICH_FIELDS ? ',places.rating,places.userRatingCount,places.currentOpeningHours.openNow' : '');
+        const resp = await fetch(PLACES_TEXTSEARCH, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': env.GOOGLE_PLACES_KEY,
+            'X-Goog-FieldMask': fields,
+          },
+          body: JSON.stringify({
+            textQuery: 'billiards pool hall snooker',
+            locationBias: { circle: { center: { latitude: lat, longitude: lng }, radius: radius } },
+            rankPreference: 'DISTANCE',
+            pageSize: 20,
+          }),
         });
+        if (!resp.ok) return [];
+        const data = await resp.json();
+        // locationBias is a bias, not a restriction — enforce the radius here so
+        // the client's expanding-radius steps keep their meaning.
+        const R = 6371000, rad = Math.PI / 180;
+        function distM(aLat, aLng, bLat, bLng) {
+          const dLa = (bLat - aLat) * rad, dLo = (bLng - aLng) * rad;
+          const h = Math.sin(dLa / 2) ** 2 + Math.cos(aLat * rad) * Math.cos(bLat * rad) * Math.sin(dLo / 2) ** 2;
+          return 2 * R * Math.asin(Math.sqrt(h));
+        }
+        return (data.places || [])
+          .filter(function (p) {
+            const loc = p.location || {};
+            return loc.latitude != null && loc.longitude != null &&
+              distM(lat, lng, loc.latitude, loc.longitude) <= radius;
+          })
+          .map(function (p) {
+            const loc = p.location;
+            const ref = p.photos && p.photos[0] && p.photos[0].name;
+            return {
+              id: 'gp_' + p.id, placeId: p.id,
+              name: (p.displayName && p.displayName.text) || '',
+              lat: loc.latitude, lng: loc.longitude, rating: p.rating || null,
+              userRatings: p.userRatingCount || 0, address: p.formattedAddress || '',
+              openNow: p.currentOpeningHours ? !!p.currentOpeningHours.openNow : null,
+              types: p.types || [], source: 'google',
+              photoUrl: ref ? `${origin}/photo?ref=${encodeURIComponent(ref)}&w=800` : null,
+            };
+          });
       }
 
       // Yelp Fusion business search — image_url is directly usable (no key needed to display).

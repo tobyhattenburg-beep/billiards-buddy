@@ -7,7 +7,7 @@
 // and the old cache is purged on activate.
 // ============================================================
 
-const CACHE_NAME = 'bb-cache-v23';
+const CACHE_NAME = 'bb-cache-v24';
 
 const PRECACHE_URLS = [
   './',
@@ -35,12 +35,17 @@ const NETWORK_ONLY_HOSTS = [
   'fonts.gstatic.com',
   'tile.openstreetmap.org',
   'overpass-api.de',
-  'nominatim.openstreetmap.org',
   'www.gstatic.com',
   'firebaseio.com',
   'firebase.googleapis.com',
   'identitytoolkit.googleapis.com',
-  'securetoken.googleapis.com'
+  'securetoken.googleapis.com',
+  'unpkg.com',
+  'api.dicebear.com',
+  'images.pexels.com',
+  'img.youtube.com',
+  'player.vimeo.com',
+  'workers.dev'
 ];
 
 // ── install ──────────────────────────────────────────────────
