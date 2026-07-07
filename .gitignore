@@ -1,2 +1,6 @@
 # Firebase service config — contains keys, keep local only
 google-services.json
+
+# Local dev / smoke-test harnesses (not part of the deployed app)
+_smoke.html
+test-server.ps1
