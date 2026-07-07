@@ -6,19 +6,21 @@ _Read this first when resuming. It's the living "you are here" for the Android/i
 
 ## ▶ YOU ARE HERE (last updated: 2026-07-06)
 
-**Phase A — Deploy & harden the PWA — in progress.** Edits applied locally, commit/push/verify pending.
+**Phase A — Deploy & harden the PWA — ✅ COMPLETE & VERIFIED LIVE.** Paused before Phase B per decision D3.
 
 **Done this session:**
-- Committed the A–H roadmap to `store/ANDROID-ROADMAP.md` (+ runbook pointer) — commit `1d006f7`.
-- `index.html`: viewport `viewport-fit=cover`; `env(safe-area-inset-*)` on `#bottom-nav`, `.screen`, `#more-drawer`, `#notif-bell`, `#toast-container` (all via `max()`/`calc()` so desktop is unchanged); `<title>` → `Billiards Buddy`.
+- Roadmap → `store/ANDROID-ROADMAP.md` (+ runbook pointer) — commit `1d006f7`.
+- `index.html`: viewport `viewport-fit=cover`; `env(safe-area-inset-*)` on `#bottom-nav`, `.screen`, `#more-drawer`, `#notif-bell`, `#toast-container` (via `max()`/`calc()` so desktop is unchanged); `<title>` → `Billiards Buddy`.
 - `sw.js`: `CACHE_NAME` `bb-cache-v24` → `bb-cache-v25`.
-- Added `decisions.md` + this `handoff.md`.
+- Added `decisions.md` + this `handoff.md`; gitignored `_smoke.html` + `test-server.ps1`; moved repo junk to `Downloads/billiards-repo-cleanup-2026-07-06`.
+- Committed `b40258a`, pushed. **Verified live:** `sw.js` serves `bb-cache-v25`, `<title>` = `Billiards Buddy`, mobile-viewport headless screenshot shows chrome unclipped.
 
-**Next actions (resume here):**
-1. Repo hygiene: move junk (EXEs/zip/art/`hustle_kings*`/master-prompt txt/stray jpg) out to `Downloads`; gitignore `_smoke.html` + `test-server.ps1`.
-2. Commit + push Phase A (safe-area + title + cache + gitignore + process docs).
-3. Verify: curl live `sw.js` shows `bb-cache-v25`; live `<title>` = `Billiards Buddy`; headless-Chrome screenshot of live URL confirms chrome unclipped.
-4. **PAUSE.** Do not start Phase B (Bubblewrap) without owner go-ahead — it mints the permanent keystore.
+**Next actions (resume here) — Phase B, needs owner go-ahead:**
+1. ⚠ **Confirm decision D4 (Play account type) first** — it drives the timeline.
+2. `npm i -g @bubblewrap/cli` (accept ~2 GB JDK/SDK); `bubblewrap init --manifest .../manifest.json` (package `io.github.tobyhattenburg.billiardsbuddy`, location+notification delegation ON, **new keystore**); `bubblewrap build`.
+3. Inspect `AndroidManifest.xml` (targetSdk 36, INTERNET/LOCATION/**CAMERA**/POST_NOTIFICATIONS).
+4. 🔒 **OWNER backs up the keystore ×2 off-machine** — irreversible gate.
+5. Then Phase C: create `tobyhattenburg-beep.github.io` user-pages repo with `.well-known/assetlinks.json`.
 
 ## ⚠ Open decisions blocking progress
 - **D4 (account type):** Personal vs Organization — undecided. Drives the whole timeline. See `decisions.md`.
