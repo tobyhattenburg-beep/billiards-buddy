@@ -4,6 +4,8 @@ _Follow top to bottom. Everything Claude could do is done; each step below needs
 
 **The one thing you cannot skip or rush:** your Play account is personal and (if created after Nov 13, 2023) requires a **closed test with 12 testers opted in for 14 consecutive days** before production. Start recruiting testers on day 1.
 
+> **Full A–H build roadmap (what Claude does vs. what you do):** see [`ANDROID-ROADMAP.md`](./ANDROID-ROADMAP.md) in this folder.
+
 ---
 
 ## STEP 1 — Create your Google Play Developer account (Day 1, ~30 min + up to 2 days verification)
