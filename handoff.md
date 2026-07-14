@@ -4,26 +4,28 @@ _Read this first when resuming. It's the living "you are here" for the Android/i
 
 ---
 
-## ▶ YOU ARE HERE (last updated: 2026-07-06)
+## ▶ YOU ARE HERE (last updated: 2026-07-14)
 
-**Phase A — Deploy & harden the PWA — ✅ COMPLETE & VERIFIED LIVE.** Paused before Phase B per decision D3.
+**Phase B — Android/TWA project + keystore — ✅ DONE (built in remote session). AAB build + push ⛔ BLOCKED on repo write access.**
 
-**Done this session:**
-- Roadmap → `store/ANDROID-ROADMAP.md` (+ runbook pointer) — commit `1d006f7`.
-- `index.html`: viewport `viewport-fit=cover`; `env(safe-area-inset-*)` on `#bottom-nav`, `.screen`, `#more-drawer`, `#notif-bell`, `#toast-container` (via `max()`/`calc()` so desktop is unchanged); `<title>` → `Billiards Buddy`.
-- `sw.js`: `CACHE_NAME` `bb-cache-v24` → `bb-cache-v25`.
-- Added `decisions.md` + this `handoff.md`; gitignored `_smoke.html` + `test-server.ps1`; moved repo junk to `Downloads/billiards-repo-cleanup-2026-07-06`.
-- Committed `b40258a`, pushed. **Verified live:** `sw.js` serves `bb-cache-v25`, `<title>` = `Billiards Buddy`, mobile-viewport headless screenshot shows chrome unclipped.
+**Done this session (remote Claude Code session, branch `claude/billiard-buddy-play-store-9n342p`):**
+- `android/` TWA project generated with Bubblewrap CLI 1.24.1 from `android/twa-manifest.json` — package `io.github.tobyhattenburg.billiardsbuddy`, v1.0.0 (code 1), minSdk 21, **targetSdk 36**, portrait, location delegation, notification delegation, **CAMERA** permission added (roadmap B.4), launcher/maskable/splash/notification icons generated. Post-generation patches documented in `android/README.md`.
+- **Permanent upload keystore minted** (RSA-4096, 30 yr, alias `billiardsbuddy`). SHA-256 `FB:90:36:9F:D6:62:0D:88:93:13:8B:F9:1E:E8:01:F8:18:E0:F2:27:5C:40:A3:D3:D1:CF:FA:33:EF:4C:AB:1A`. Keystore + KEY-INFO delivered to owner in-session — **owner must back up ×2 off-machine (irreversible gate)**. Keystore is NOT in git, by design.
+- `.github/workflows/android-build.yml` — CI builds the unsigned release AAB/APK and commits to `dist/`; signing stays offline with the keystore (see `android/README.md`).
+- Phase C kit ready: `store/user-pages-repo/` (assetlinks.json with the **real** upload-key SHA-256 + .nojekyll + instructions).
 
-**Next actions (resume here) — Phase B, needs owner go-ahead:**
-1. ⚠ **Confirm decision D4 (Play account type) first** — it drives the timeline.
-2. `npm i -g @bubblewrap/cli` (accept ~2 GB JDK/SDK); `bubblewrap init --manifest .../manifest.json` (package `io.github.tobyhattenburg.billiardsbuddy`, location+notification delegation ON, **new keystore**); `bubblewrap build`.
-3. Inspect `AndroidManifest.xml` (targetSdk 36, INTERNET/LOCATION/**CAMERA**/POST_NOTIFICATIONS).
-4. 🔒 **OWNER backs up the keystore ×2 off-machine** — irreversible gate.
-5. Then Phase C: create `tobyhattenburg-beep.github.io` user-pages repo with `.well-known/assetlinks.json`.
+**⛔ Blocker:** this session's GitHub integration is **read-only** (`403 Resource not accessible by integration` on git push and API writes; reads fine). Owner: grant the Claude GitHub app **write** access to `tobyhattenburg-beep/billiards-buddy`, then Claude pushes the branch → CI builds the AAB → Claude signs + verifies it.
+
+**Next actions (resume here):**
+1. **OWNER: fix repo write access** (Claude GitHub settings) → push branch `claude/billiard-buddy-play-store-9n342p`.
+2. CI `Android build` runs → unsigned AAB in `dist/` → sign with `jarsigner` (command in KEY-INFO.md / android/README.md) → verify with bundletool.
+3. Phase C: create `tobyhattenburg-beep.github.io` user-pages repo from `store/user-pages-repo/` (3-min owner task, or Claude with access).
+4. Merge branch → master when owner approves (GitHub Pages deploys from master; `android/` + workflow are inert for the PWA).
+5. ⚠ **Decision D4 (Play account type)** still open — decide before Phase D; if Personal, start recruiting ~15 testers day 1.
 
 ## ⚠ Open decisions blocking progress
 - **D4 (account type):** Personal vs Organization — undecided. Drives the whole timeline. See `decisions.md`.
+- **Repo write access** for the remote session (see blocker above).
 
 ## 🔑 Owner action items (cannot be done by Claude)
 - Choose Play account type (D4); if Personal, start recruiting ~15 testers **day 1** (12 needed for 14 continuous days).

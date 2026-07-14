@@ -58,3 +58,15 @@ Legend — **Status:** `SETTLED` (decided, acting on it) · `OPEN` (still to be 
 - **Date:** 2026-06-25
 - **Status:** OPEN (deferred until Android traction) · **Reversible:** High
 - **Lean:** **Capacitor** shell + native plugins (Geolocation/Camera/Push) to pass Apple Guideline 4.2 — a thin PWABuilder iOS wrapper gets rejected. No Mac ⇒ cloud build (try free GitHub Actions macOS runners first, else Codemagic ~$20/mo). Apple Developer $99/yr.
+
+### D10 — AAB build path in remote sessions: CI build + offline signing
+- **Date:** 2026-07-14
+- **Status:** SETTLED · **Reversible:** High
+- **Options:** (a) local `bubblewrap build` (needs dl.google.com for JDK/SDK/AGP), (b) GitHub Actions builds the unsigned AAB + keystore signs offline, (c) commit keystore/secrets so CI signs.
+- **Choice:** **(b)** — remote-session egress policy blocks `dl.google.com`, so Gradle runs in CI (`.github/workflows/android-build.yml`, outputs to `dist/`), and signing happens wherever the keystore lives (Claude session or owner machine) via `jarsigner`. The keystore is **never** in git or CI secrets.
+- **Why:** keeps D2's "verifiable, repeatable builds" while the keystore stays private; CI is also the future update path.
+
+### D11 — Keystore custody
+- **Date:** 2026-07-14
+- **Status:** SETTLED · **Reversible:** ❌ None once uploaded to Play
+- **Choice:** Upload keystore minted 2026-07-14 (RSA-4096, alias `billiardsbuddy`, SHA-256 `FB:90:36:9F:…:AB:1A`), delivered to owner in-session with KEY-INFO (passwords + fingerprints). Owner backs up ×2 off-machine. Play App Signing model, so a lost upload key is recoverable via Play support — but treated as permanent.

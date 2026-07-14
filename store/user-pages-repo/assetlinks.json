@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.github.tobyhattenburg.billiardsbuddy",
+      "sha256_cert_fingerprints": [
+        "FB:90:36:9F:D6:62:0D:88:93:13:8B:F9:1E:E8:01:F8:18:E0:F2:27:5C:40:A3:D3:D1:CF:FA:33:EF:4C:AB:1A"
+      ]
+    }
+  }
+]
