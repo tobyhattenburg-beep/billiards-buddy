@@ -1,0 +1,46 @@
+{
+  "packageId": "io.github.tobyhattenburg.billiardsbuddy",
+  "host": "tobyhattenburg-beep.github.io",
+  "name": "Billiards Buddy",
+  "launcherName": "BB Buddy",
+  "display": "standalone",
+  "themeColor": "#d4a017",
+  "themeColorDark": "#d4a017",
+  "navigationColor": "#061a0b",
+  "navigationColorDark": "#061a0b",
+  "navigationDividerColor": "#061a0b",
+  "navigationDividerColorDark": "#061a0b",
+  "backgroundColor": "#061a0b",
+  "enableNotifications": true,
+  "startUrl": "/billiards-buddy/",
+  "iconUrl": "https://tobyhattenburg-beep.github.io/billiards-buddy/icon-512.png",
+  "maskableIconUrl": "https://tobyhattenburg-beep.github.io/billiards-buddy/icon-512-maskable.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "./signing.keystore",
+    "alias": "billiardsbuddy"
+  },
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://tobyhattenburg-beep.github.io/billiards-buddy/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://tobyhattenburg-beep.github.io/billiards-buddy/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": []
+}
