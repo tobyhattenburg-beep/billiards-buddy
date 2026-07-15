@@ -23,7 +23,8 @@
     package="io.github.tobyhattenburg.billiardsbuddy">
 
     
-        <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+        <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     
