@@ -4,9 +4,9 @@ _Read this first when resuming. It's the living "you are here" for the Android/i
 
 ---
 
-## ▶ YOU ARE HERE (last updated: 2026-07-14)
+## ▶ YOU ARE HERE (last updated: 2026-07-15)
 
-**Phase B — Android/TWA project + keystore — ✅ DONE (built in remote session). AAB build + push ⛔ BLOCKED on repo write access.**
+**Phase B — ✅ COMPLETE.** Signed AAB v1.0.0 built, verified, and delivered to owner. Write access was granted 2026-07-15; everything below is pushed.
 
 **Done this session (remote Claude Code session, branch `claude/billiard-buddy-play-store-9n342p`):**
 - `android/` TWA project generated with Bubblewrap CLI 1.24.1 from `android/twa-manifest.json` — package `io.github.tobyhattenburg.billiardsbuddy`, v1.0.0 (code 1), minSdk 21, **targetSdk 36**, portrait, location delegation, notification delegation, **CAMERA** permission added (roadmap B.4), launcher/maskable/splash/notification icons generated. Post-generation patches documented in `android/README.md`.
@@ -14,18 +14,17 @@ _Read this first when resuming. It's the living "you are here" for the Android/i
 - `.github/workflows/android-build.yml` — CI builds the unsigned release AAB/APK and commits to `dist/`; signing stays offline with the keystore (see `android/README.md`).
 - Phase C kit ready: `store/user-pages-repo/` (assetlinks.json with the **real** upload-key SHA-256 + .nojekyll + instructions).
 
-**⛔ Blocker:** this session's GitHub integration is **read-only** (`403 Resource not accessible by integration` on git push and API writes; reads fine). Owner: grant the Claude GitHub app **write** access to `tobyhattenburg-beep/billiards-buddy`, then Claude pushes the branch → CI builds the AAB → Claude signs + verifies it.
+**AAB build result (2026-07-15):** CI (`Android build` workflow) builds the unsigned AAB/APK into `dist/`; bundletool `validate` + manifest dump run in CI and passed. Final AAB signed offline with the upload keystore (`jarsigner`, `jar verified.`), signer SHA-256 confirmed = assetlinks fingerprint. Manifest verified: package `io.github.tobyhattenburg.billiardsbuddy`, versionCode 1 / versionName 1.0.0, minSdk 21 / targetSdk 36, INTERNET + CAMERA + FINE/COARSE_LOCATION + POST_NOTIFICATIONS, `autoVerify` on `tobyhattenburg-beep.github.io/billiards-buddy/`. **`billiards-buddy-1.0.0-signed.aab` delivered to owner in-session** — this is the Play upload file.
 
 **Next actions (resume here):**
-1. **OWNER: fix repo write access** (Claude GitHub settings) → push branch `claude/billiard-buddy-play-store-9n342p`.
-2. CI `Android build` runs → unsigned AAB in `dist/` → sign with `jarsigner` (command in KEY-INFO.md / android/README.md) → verify with bundletool.
-3. Phase C: create `tobyhattenburg-beep.github.io` user-pages repo from `store/user-pages-repo/` (3-min owner task, or Claude with access).
-4. Merge branch → master when owner approves (GitHub Pages deploys from master; `android/` + workflow are inert for the PWA).
+1. Phase C: create `tobyhattenburg-beep.github.io` user-pages repo from `store/user-pages-repo/` (3-min owner task, or Claude if given access to that repo).
+2. Phase D/E (owner): Play Developer account, then Console setup per `store/OWNER-RUNBOOK.md` + `store/SUBMISSION-CHECKLIST.md`; upload the signed AAB to Internal testing; real-device smoke test.
+3. Phase F gate: after first upload, copy the **Play App Signing** SHA-256 from Console → App integrity and add it as the second fingerprint in `.well-known/assetlinks.json` (instructions in `store/user-pages-repo/README.md`).
+4. Merge branch → master when owner approves (GitHub Pages deploys from master; `android/` + workflow + `dist/` are inert for the PWA).
 5. ⚠ **Decision D4 (Play account type)** still open — decide before Phase D; if Personal, start recruiting ~15 testers day 1.
 
 ## ⚠ Open decisions blocking progress
 - **D4 (account type):** Personal vs Organization — undecided. Drives the whole timeline. See `decisions.md`.
-- **Repo write access** for the remote session (see blocker above).
 
 ## 🔑 Owner action items (cannot be done by Claude)
 - Choose Play account type (D4); if Personal, start recruiting ~15 testers **day 1** (12 needed for 14 continuous days).
