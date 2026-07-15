@@ -14,10 +14,12 @@ Signing happens **offline** with the permanent upload keystore (never in git, ne
 in CI secrets):
 
 ```
-jarsigner -keystore signing.keystore -storepass <store-pass> -keypass <key-pass> \
+jarsigner -keystore signing.keystore -storepass <store-pass> \
   -sigalg SHA256withRSA -digestalg SHA-256 \
-  dist/app-release.aab billiardsbuddy
+  dist/app-release-unsigned.aab billiardsbuddy
 ```
+
+(The keystore is PKCS12: the key password equals the store password.)
 
 The keystore + passwords live in the owner's off-machine backups (see
 `store/OWNER-RUNBOOK.md`). Losing the keystore means the app can never be updated.
