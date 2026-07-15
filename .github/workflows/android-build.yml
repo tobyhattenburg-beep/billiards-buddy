@@ -49,6 +49,13 @@ jobs:
           sha256sum dist/app-release-unsigned.aab dist/app-release-unsigned.apk > dist/SHA256SUMS.txt
           cat dist/SHA256SUMS.txt
 
+      - name: Validate bundle (bundletool)
+        run: |
+          curl -sSL -o /tmp/bundletool.jar https://github.com/google/bundletool/releases/download/1.18.1/bundletool-all-1.18.1.jar
+          java -jar /tmp/bundletool.jar validate --bundle dist/app-release-unsigned.aab
+          echo "--- manifest dump ---"
+          java -jar /tmp/bundletool.jar dump manifest --bundle dist/app-release-unsigned.aab
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
